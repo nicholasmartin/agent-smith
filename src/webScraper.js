@@ -28,60 +28,82 @@ async function scrapeWebsite(domain) {
 
     console.log(`Starting extraction for domain: ${domain}`);
     
-    // Start the extraction process
-    const extractJob = await app.asyncExtract(
-      [`https://${domain}/`],
-      {
-        prompt: "Draft a 200-word max overview of the website. Provide a short paragraph that summarizes the homepage. Extract the company name, a list of services, and a list of products they provide.",
-        schema
-      }
-    );
-
-    // Debug log to see the structure of the response
-    console.log('Extract job response type:', typeof extractJob);
-    console.log('Extract job response keys:', extractJob ? Object.keys(extractJob) : 'No keys (null or undefined)');
-    console.log('Extract job response full object:', extractJob);
+    // Add more detailed logging before the API call
+    console.log('About to call Firecrawl asyncExtract API...');
+    console.log('API Key length:', process.env.FIRECRAWL_API_KEY ? process.env.FIRECRAWL_API_KEY.length : 'API key not found');
+    console.log('Target URL:', `https://${domain}/`);
     
     try {
-      console.log('Extract job response JSON:', JSON.stringify(extractJob, null, 2));
-    } catch (e) {
-      console.log('Could not stringify extract job response:', e.message);
-    }
-    
-    // Extract the job ID - check different possible structures
-    let jobId;
-    if (extractJob && extractJob.jobId) {
-      jobId = extractJob.jobId;
-    } else if (extractJob && extractJob.id) {
-      jobId = extractJob.id;
-    } else if (typeof extractJob === 'string') {
-      jobId = extractJob;
-    } else {
-      console.log('Unable to determine job ID from response:', extractJob);
-      throw new Error('Failed to get extraction job ID');
-    }
-    
-    console.log(`Extraction started with ID: ${jobId}`);
-    
-    // Wait for extraction to complete with timeout
-    const extractResult = await waitForExtraction(app, jobId, 120); // 120 second timeout
-    
-    if (!extractResult) {
-      throw new Error('Extraction timed out or failed');
-    }
+      // Start the extraction process
+      console.log('Calling asyncExtract...');
+      const extractJob = await app.asyncExtract(
+        [`https://${domain}/`],
+        {
+          prompt: "Draft a 200-word max overview of the website. Provide a short paragraph that summarizes the homepage. Extract the company name, a list of services, and a list of products they provide.",
+          schema
+        }
+      );
+      console.log('asyncExtract call completed successfully');
 
-    console.log(`Extraction completed for ${domain}`);
-    
-    // Return extracted data in a structured format
-    return {
-      url: websiteUrl,
-      companyName: extractResult.company_name || formatDomainAsCompanyName(domain),
-      pageText: extractResult.overview || '',
-      summary: extractResult.summary || '',
-      services: extractResult.services || [],
-      products: extractResult.products || [],
-      contactTitle: extractResult.contact_title || ''
-    };
+      // Debug log to see the structure of the response
+      console.log('Extract job response type:', typeof extractJob);
+      console.log('Extract job response keys:', extractJob ? Object.keys(extractJob) : 'No keys (null or undefined)');
+      console.log('Extract job response full object:', extractJob);
+      
+      try {
+        console.log('Extract job response JSON:', JSON.stringify(extractJob, null, 2));
+      } catch (e) {
+        console.log('Could not stringify extract job response:', e.message);
+      }
+      
+      // Extract the job ID - check different possible structures
+      let jobId;
+      if (extractJob && extractJob.jobId) {
+        jobId = extractJob.jobId;
+      } else if (extractJob && extractJob.id) {
+        jobId = extractJob.id;
+      } else if (typeof extractJob === 'string') {
+        jobId = extractJob;
+      } else {
+        console.log('Unable to determine job ID from response:', extractJob);
+        throw new Error('Failed to get extraction job ID');
+      }
+      
+      console.log(`Extraction started with ID: ${jobId}`);
+      
+      // Wait for extraction to complete with timeout
+      const extractResult = await waitForExtraction(app, jobId, 120); // 120 second timeout
+      
+      if (!extractResult) {
+        throw new Error('Extraction timed out or failed');
+      }
+
+      console.log(`Extraction completed for ${domain}`);
+      
+      // Return extracted data in a structured format
+      return {
+        url: websiteUrl,
+        companyName: extractResult.company_name || formatDomainAsCompanyName(domain),
+        pageText: extractResult.overview || '',
+        summary: extractResult.summary || '',
+        services: extractResult.services || [],
+        products: extractResult.products || [],
+        contactTitle: extractResult.contact_title || ''
+      };
+    } catch (error) {
+      console.error('Error during asyncExtract call:');
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      if (error.response) {
+        console.error('API Response error data:', error.response.data);
+        console.error('API Response error status:', error.response.status);
+      }
+      
+      // Rethrow the error to be handled by the outer try/catch
+      throw error;
+    }
   } catch (error) {
     console.error(`Error scraping website for ${domain}:`, error);
     
