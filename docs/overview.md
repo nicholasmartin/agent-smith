@@ -59,7 +59,7 @@ bashCopynpm install
 node server.js
 
 Testing The API
-Invoke-WebRequest -Uri "https://agent-smith.netlify.app/.netlify/functions/server/api/process-signup" `
+Invoke-WebRequest -Uri "https://agent-smith-iota.vercel.app/api/process-signup" `
   -Method POST `
   -Headers @{
     "Content-Type" = "application/json"
