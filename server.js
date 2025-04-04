@@ -3,7 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const https = require('https');
 const dns = require('dns');
-const { FireCrawl } = require('@mendable/firecrawl-js');
+const FireCrawlApp = require('@mendable/firecrawl-js').default;
 const { z } = require('zod');
 const emailProcessor = require('./src/emailProcessor');
 
@@ -216,7 +216,9 @@ app.get('/api/test-firecrawl', async (req, res) => {
   try {
     // Initialize FireCrawl SDK with API key
     console.log('Initializing FireCrawl SDK...');
-    const app = new FireCrawl(process.env.FIRECRAWL_API_KEY);
+    const app = new FireCrawlApp({
+      apiKey: process.env.FIRECRAWL_API_KEY
+    });
     console.log('FireCrawl SDK initialized');
     
     // Define a simple schema for extraction
