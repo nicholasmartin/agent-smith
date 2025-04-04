@@ -80,3 +80,5 @@ Implement database storage with Supabase
 Create an admin dashboard
 Add email template customization
 Implement rate limiting and monitoring
+
+Just some text to trigger a redeploy.
