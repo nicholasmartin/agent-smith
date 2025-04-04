@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Smith</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        code {
+            background-color: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .endpoint {
+            margin-top: 20px;
+            background-color: #e9f7fe;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Agent Smith API</h1>
+    </header>
+    <div class="container">
+        <p>Welcome to the Agent Smith API service. This API processes new signup information, researches business domains, and generates personalized email drafts.</p>
+        
+        <h2>API Status</h2>
+        <p>The API is currently running and ready to accept requests.</p>
+        
+        <div class="endpoint">
+            <h3>Main Endpoint</h3>
+            <p><strong>POST</strong> /api/process-signup</p>
+            <p>Processes a new signup and generates a personalized email draft.</p>
+            <p><strong>Headers:</strong></p>
+            <pre><code>Content-Type: application/json
+X-API-Key: your-api-key-here</code></pre>
+            <p><strong>Request Body:</strong></p>
+            <pre><code>{
+  "email": "john@acmecorp.com",
+  "name": "John Smith"
+}</code></pre>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,7 @@
+flowchart TD
+    A[Company API Call] --> B[Express Server]
+    B --> C{Check Email Domain}
+    C -->|Free Domain| D[Ignore]
+    C -->|Business Domain| E[Firecrawl Scraper]
+    E --> F[OpenAI API]
+    F --> G[Slack Webhook]
