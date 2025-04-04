@@ -36,20 +36,54 @@ app.post('/api/process-signup', validateApiKey, async (req, res) => {
       return res.status(400).json({ error: 'Email and name are required' });
     }
     
-    // Process the signup asynchronously
-    emailProcessor.processSignup(email, name)
-      .then(() => console.log(`Processing completed for ${email}`))
-      .catch(err => console.error(`Error processing ${email}:`, err));
+    // Start the signup processing and get job info
+    const jobInfo = await emailProcessor.processSignup(email, name);
     
-    // Return immediately to the client
+    // Return job information to the client
     return res.status(202).json({ 
       message: 'Signup received and being processed',
       email,
-      name
+      name,
+      jobId: jobInfo.jobId,
+      status: jobInfo.status
     });
   } catch (error) {
     console.error('API error:', error);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get all active jobs with API key validation
+app.get('/api/jobs', validateApiKey, async (req, res) => {
+  try {
+    const activeJobs = emailProcessor.getActiveJobs();
+    return res.status(200).json({
+      activeJobs,
+      count: Object.keys(activeJobs).length
+    });
+  } catch (error) {
+    console.error('Error getting active jobs:', error);
+    return res.status(500).json({ error: 'Error getting active jobs' });
+  }
+});
+
+// Job status endpoint with API key validation
+app.get('/api/job-status/:jobId', validateApiKey, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { email, name, domain } = req.query;
+    
+    if (!jobId) {
+      return res.status(400).json({ error: 'Job ID is required' });
+    }
+    
+    // Check the job status
+    const statusInfo = await emailProcessor.checkJobStatus(jobId, email, name, domain);
+    
+    return res.status(200).json(statusInfo);
+  } catch (error) {
+    console.error('Error checking job status:', error);
+    return res.status(500).json({ error: 'Error checking job status' });
   }
 });
 

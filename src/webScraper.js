@@ -3,11 +3,11 @@ const FireCrawlApp = require('@mendable/firecrawl-js').default;
 const { z } = require('zod');
 
 /**
- * Scrape website content using Firecrawl API
+ * Start a website scraping job using Firecrawl API
  * @param {string} domain - Domain to scrape
- * @returns {Object} Website data including text, summary, and services
+ * @returns {Object} Job information including ID and status
  */
-async function scrapeWebsite(domain) {
+async function startScrapeJob(domain) {
   try {
     const websiteUrl = `https://${domain}`;
     
@@ -71,24 +71,13 @@ async function scrapeWebsite(domain) {
       
       console.log(`Extraction started with ID: ${jobId}`);
       
-      // Wait for extraction to complete with timeout
-      const extractResult = await waitForExtraction(app, jobId, 120); // 120 second timeout
-      
-      if (!extractResult) {
-        throw new Error('Extraction timed out or failed');
-      }
-
-      console.log(`Extraction completed for ${domain}`);
-      
-      // Return extracted data in a structured format
+      // Return job information immediately without waiting for completion
       return {
+        status: 'processing',
+        jobId: jobId,
+        domain: domain,
         url: websiteUrl,
-        companyName: extractResult.company_name || formatDomainAsCompanyName(domain),
-        pageText: extractResult.overview || '',
-        summary: extractResult.summary || '',
-        services: extractResult.services || [],
-        products: extractResult.products || [],
-        contactTitle: extractResult.contact_title || ''
+        startTime: new Date().toISOString()
       };
     } catch (error) {
       console.error('Error during asyncExtract call:');
@@ -239,6 +228,88 @@ function extractServices(data) {
   return [];
 }
 
+/**
+ * Check the status of a scraping job
+ * @param {string} jobId - ID of the extraction job
+ * @returns {Object} Job status and result if completed
+ */
+async function checkScrapeJobStatus(jobId) {
+  try {
+    // Initialize FireCrawl SDK
+    const app = new FireCrawlApp({
+      apiKey: process.env.FIRECRAWL_API_KEY
+    });
+    
+    console.log(`Checking status for job ID: ${jobId}`);
+    const status = await app.getExtractStatus(jobId);
+    
+    console.log('Status response:', status);
+    
+    if (!status) {
+      return { status: 'error', message: 'Failed to get status' };
+    }
+    
+    if (status.status === 'completed') {
+      // Get the result data
+      let result;
+      if (status.result) {
+        result = status.result;
+      } else if (status.data) {
+        result = status.data;
+      } else if (status.output) {
+        result = status.output;
+      }
+      
+      if (!result) {
+        return { status: 'error', message: 'Extraction completed but no result found' };
+      }
+      
+      // Format the result
+      return {
+        status: 'completed',
+        result: {
+          companyName: result.company_name || '',
+          pageText: result.overview || '',
+          summary: result.summary || '',
+          services: result.services || [],
+          products: result.products || [],
+          contactTitle: result.contact_title || ''
+        }
+      };
+    } else if (status.status === 'failed') {
+      return { status: 'failed', message: status.error || 'Extraction failed' };
+    } else {
+      return { status: 'processing' };
+    }
+  } catch (error) {
+    console.error(`Error checking job status for ${jobId}:`, error);
+    return { status: 'error', message: error.message };
+  }
+}
+
+/**
+ * Complete the scraping process and format the results
+ * @param {string} domain - Domain that was scraped
+ * @param {Object} extractResult - Result from the extraction
+ * @returns {Object} Formatted website data
+ */
+async function formatScrapeResult(domain, extractResult) {
+  const websiteUrl = `https://${domain}/`;
+  
+  return {
+    url: websiteUrl,
+    companyName: extractResult.companyName || formatDomainAsCompanyName(domain),
+    pageText: extractResult.pageText || '',
+    summary: extractResult.summary || '',
+    services: extractResult.services || [],
+    products: extractResult.products || [],
+    contactTitle: extractResult.contactTitle || ''
+  };
+}
+
 module.exports = {
-  scrapeWebsite
+  startScrapeJob,
+  checkScrapeJobStatus,
+  formatScrapeResult,
+  notifyScrapingFailure
 };
