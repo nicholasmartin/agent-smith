@@ -7,6 +7,7 @@ const FireCrawlApp = require('@mendable/firecrawl-js').default;
 const { z } = require('zod');
 const emailProcessor = require('./src/emailProcessor');
 const jobStore = require('./src/jobStore');
+const processJobs = require('./api/cron/process-jobs');
 
 const app = express();
 app.use(express.json());
@@ -27,6 +28,9 @@ const validateApiKey = (req, res, next) => {
 app.get('/', (req, res) => {
   res.send('Agent Smith API is running');
 });
+
+// Cron job endpoint
+app.all('/api/cron/process-jobs', processJobs);
 
 // Get jobs by status endpoint
 app.get('/api/jobs/status/:status', validateApiKey, async (req, res) => {
