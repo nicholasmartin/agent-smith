@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Smith - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Agent Smith Dashboard</h1>
+    </header>
+    
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="dashboard.html" class="active">Dashboard</a>
+        <a href="new-signup.html">New Signup</a>
+    </nav>
+    
+    <div class="container">
+        <h2>Job Status</h2>
+        <div class="filter-controls">
+            <button class="button" onclick="loadJobs('all')">All Jobs</button>
+            <button class="button" onclick="loadJobs('pending')">Pending</button>
+            <button class="button" onclick="loadJobs('scraping')">Scraping</button>
+            <button class="button" onclick="loadJobs('generating_email')">Generating Email</button>
+            <button class="button" onclick="loadJobs('completed')">Completed</button>
+            <button class="button" onclick="loadJobs('failed')">Failed</button>
+        </div>
+        
+        <div id="jobs-container" class="grid">
+            <!-- Jobs will be loaded here -->
+            <div class="card">
+                <p>Loading jobs...</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>System Status</h2>
+        <div class="card">
+            <h3>API Status</h3>
+            <p id="api-status">Checking...</p>
+            <button class="button" onclick="checkApiStatus()">Check API Status</button>
+        </div>
+        
+        <div class="card">
+            <h3>Cron Job Status</h3>
+            <p id="cron-status">Last run: Unknown</p>
+            <button class="button" onclick="triggerCronJob()">Trigger Cron Job Manually</button>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Agent Smith - Email Personalization Service</p>
+    </footer>
+    
+    <script>
+        // API key for authentication
+        const API_KEY = ''; // This should be set by the user
+        
+        // Function to load jobs by status
+        async function loadJobs(status) {
+            const jobsContainer = document.getElementById('jobs-container');
+            jobsContainer.innerHTML = '<div class="card"><p>Loading jobs...</p></div>';
+            
+            try {
+                let url = '/api/jobs';
+                if (status !== 'all') {
+                    url = `/api/jobs/status/${status}`;
+                }
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'X-API-Key': API_KEY
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const jobs = await response.json();
+                
+                if (jobs.length === 0) {
+                    jobsContainer.innerHTML = '<div class="card"><p>No jobs found.</p></div>';
+                    return;
+                }
+                
+                jobsContainer.innerHTML = '';
+                
+                jobs.forEach(job => {
+                    const jobCard = document.createElement('div');
+                    jobCard.className = 'card';
+                    
+                    const statusClass = `status-${job.status}`;
+                    
+                    jobCard.innerHTML = `
+                        <h3>${job.email}</h3>
+                        <p><strong>Name:</strong> ${job.name}</p>
+                        <p><strong>Domain:</strong> ${job.domain}</p>
+                        <p><strong>Status:</strong> <span class="status ${statusClass}">${job.status}</span></p>
+                        <p><strong>Created:</strong> ${new Date(job.created_at).toLocaleString()}</p>
+                        ${job.email_draft ? `<details><summary>Email Draft</summary><pre>${job.email_draft}</pre></details>` : ''}
+                        ${job.error ? `<p><strong>Error:</strong> ${job.error}</p>` : ''}
+                    `;
+                    
+                    jobsContainer.appendChild(jobCard);
+                });
+                
+            } catch (error) {
+                console.error('Error loading jobs:', error);
+                jobsContainer.innerHTML = `<div class="card"><p>Error loading jobs: ${error.message}</p></div>`;
+            }
+        }
+        
+        // Function to check API status
+        async function checkApiStatus() {
+            const statusElement = document.getElementById('api-status');
+            statusElement.textContent = 'Checking...';
+            
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    statusElement.textContent = 'API is running';
+                    statusElement.style.color = 'green';
+                } else {
+                    statusElement.textContent = `API returned status: ${response.status}`;
+                    statusElement.style.color = 'red';
+                }
+            } catch (error) {
+                statusElement.textContent = `Error checking API: ${error.message}`;
+                statusElement.style.color = 'red';
+            }
+        }
+        
+        // Function to trigger cron job manually
+        async function triggerCronJob() {
+            const statusElement = document.getElementById('cron-status');
+            statusElement.textContent = 'Triggering cron job...';
+            
+            try {
+                const response = await fetch('/api/cron/process-jobs', {
+                    headers: {
+                        'X-API-Key': API_KEY
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusElement.textContent = `Cron job executed: ${result.message}`;
+                    statusElement.style.color = 'green';
+                    
+                    // Reload jobs to show updated status
+                    loadJobs('all');
+                } else {
+                    statusElement.textContent = `Error: ${result.error || 'Unknown error'}`;
+                    statusElement.style.color = 'red';
+                }
+            } catch (error) {
+                statusElement.textContent = `Error triggering cron job: ${error.message}`;
+                statusElement.style.color = 'red';
+            }
+        }
+        
+        // Set API key from local storage if available
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedApiKey = localStorage.getItem('agentSmithApiKey');
+            if (savedApiKey) {
+                API_KEY = savedApiKey;
+                loadJobs('all');
+                checkApiStatus();
+            } else {
+                const apiKey = prompt('Please enter your API key:');
+                if (apiKey) {
+                    localStorage.setItem('agentSmithApiKey', apiKey);
+                    API_KEY = apiKey;
+                    loadJobs('all');
+                    checkApiStatus();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

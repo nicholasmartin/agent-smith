@@ -1,0 +1,184 @@
+/* Agent Smith - Main Stylesheet */
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #3498db;
+  --accent-color: #e74c3c;
+  --background-color: #f9f9f9;
+  --text-color: #333;
+  --light-gray: #f1f1f1;
+  --border-radius: 5px;
+  --box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  line-height: 1.6;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  color: var(--text-color);
+  background-color: #fff;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: var(--border-radius);
+}
+
+nav {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+nav a {
+  margin: 0 15px;
+  text-decoration: none;
+  color: var(--primary-color);
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: var(--border-radius);
+  transition: background-color 0.3s;
+}
+
+nav a:hover {
+  background-color: var(--light-gray);
+}
+
+nav a.active {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+h1, h2, h3 {
+  color: var(--primary-color);
+}
+
+.container {
+  background-color: var(--background-color);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: var(--box-shadow);
+  margin-bottom: 20px;
+}
+
+code {
+  background-color: var(--light-gray);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.endpoint {
+  margin-top: 20px;
+  background-color: #e9f7fe;
+  padding: 15px;
+  border-left: 4px solid var(--secondary-color);
+}
+
+.card {
+  background-color: white;
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--box-shadow);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+.status-pending {
+  background-color: #ffeaa7;
+  color: #d35400;
+}
+
+.status-processing {
+  background-color: #81ecec;
+  color: #00b894;
+}
+
+.status-completed {
+  background-color: #55efc4;
+  color: #00b894;
+}
+
+.status-failed {
+  background-color: #fab1a0;
+  color: #d63031;
+}
+
+.button {
+  display: inline-block;
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 8px 15px;
+  border-radius: var(--border-radius);
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background-color 0.3s;
+}
+
+.button:hover {
+  background-color: #2980b9;
+}
+
+.button-secondary {
+  background-color: #95a5a6;
+}
+
+.button-secondary:hover {
+  background-color: #7f8c8d;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius);
+  font-size: 1em;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  body {
+    padding: 10px;
+  }
+}
+
+footer {
+  text-align: center;
+  margin-top: 40px;
+  padding: 20px;
+  background-color: var(--light-gray);
+  border-radius: var(--border-radius);
+}

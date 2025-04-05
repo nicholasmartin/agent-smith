@@ -4,46 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent Smith</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            color: #333;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        h1 {
-            color: #2c3e50;
-        }
-        .container {
-            background-color: #f9f9f9;
-            border-radius: 5px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        code {
-            background-color: #f1f1f1;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-        .endpoint {
-            margin-top: 20px;
-            background-color: #e9f7fe;
-            padding: 15px;
-            border-left: 4px solid #3498db;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
         <h1>Agent Smith API</h1>
     </header>
+    
+    <nav>
+        <a href="index.html" class="active">Home</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="new-signup.html">New Signup</a>
+    </nav>
     <div class="container">
         <p>Welcome to the Agent Smith API service. This API processes new signup information, researches business domains, and generates personalized email drafts.</p>
         
@@ -64,5 +36,18 @@ X-API-Key: your-api-key-here</code></pre>
 }</code></pre>
         </div>
     </div>
+    
+    <div class="container">
+        <h2>Web Interface</h2>
+        <p>Agent Smith provides a web interface for managing jobs and submitting new signups:</p>
+        <ul>
+            <li><a href="dashboard.html">Dashboard</a> - View and manage all jobs</li>
+            <li><a href="new-signup.html">New Signup</a> - Submit a new signup for processing</li>
+        </ul>
+    </div>
+    
+    <footer>
+        <p>Agent Smith - Email Personalization Service</p>
+    </footer>
 </body>
 </html>

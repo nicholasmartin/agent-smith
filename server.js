@@ -3,6 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const https = require('https');
 const dns = require('dns');
+const path = require('path');
 const FireCrawlApp = require('@mendable/firecrawl-js').default;
 const { z } = require('zod');
 const emailProcessor = require('./src/emailProcessor');
@@ -11,6 +12,9 @@ const processJobs = require('./api/cron/process-jobs');
 
 const app = express();
 app.use(express.json());
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // API key validation middleware
 const validateApiKey = (req, res, next) => {
