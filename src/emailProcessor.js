@@ -2,9 +2,7 @@ const domainChecker = require('./domainChecker');
 const webScraper = require('./webScraper');
 const emailGenerator = require('./emailGenerator');
 const slackNotifier = require('./slackNotifier');
-
-// Store active jobs in memory (in a production environment, this would be in a database)
-const activeJobs = {};
+const jobStore = require('./jobStore');
 
 /**
  * Process a new signup by checking the domain and starting the scraping job
@@ -23,31 +21,23 @@ async function processSignup(email, name) {
       return { status: 'skipped', reason: 'free email provider' };
     }
     
-    // Step 2: Start the website scraping job
+    // Step 2: Create a job record in the database
+    console.log(`Creating job record for ${name} (${email}) from domain ${domain}`);
+    const job = await jobStore.createJob(email, name, domain);
+    
+    // Step 3: Start the website scraping job
     console.log(`Starting scrape job for domain: ${domain}`);
     const jobInfo = await webScraper.startScrapeJob(domain);
     
-    // Store the job information along with user details
-    const jobData = {
-      jobId: jobInfo.jobId,
-      status: jobInfo.status,
-      domain,
-      email,
-      name,
-      startTime: new Date().toISOString()
-    };
-    
-    // Store job in memory
-    activeJobs[jobInfo.jobId] = jobData;
-    
-    // Start background polling for this job
-    startJobPolling(jobInfo.jobId);
+    // Step 4: Update the job record with the scrape job ID
+    await jobStore.updateJobWithScrapeId(job.id, jobInfo.jobId);
     
     console.log(`Scrape job started with ID: ${jobInfo.jobId} for ${email}`);
     
     return {
       status: 'processing',
-      jobId: jobInfo.jobId,
+      jobId: job.id,
+      scrapeJobId: jobInfo.jobId,
       email,
       domain
     };
@@ -59,52 +49,92 @@ async function processSignup(email, name) {
 
 /**
  * Check the status of a processing job and complete it if ready
- * @param {string} jobId - The job ID to check
+ * @param {string} jobId - The database job ID to check
  * @returns {Object} Current status and results if complete
  */
-async function checkJobStatus(jobId, email, name, domain) {
+async function checkJobStatus(jobId) {
   try {
-    // Check the status of the scraping job
-    const jobStatus = await webScraper.checkScrapeJobStatus(jobId);
+    // Get the job from the database
+    const job = await jobStore.getJobById(jobId);
     
-    // If still processing, return status
-    if (jobStatus.status === 'processing') {
-      return { status: 'processing', jobId };
+    if (!job) {
+      return { status: 'not_found', jobId };
     }
     
-    // If there was an error or it failed, notify about the failure
-    if (jobStatus.status === 'error' || jobStatus.status === 'failed') {
-      await webScraper.notifyScrapingFailure(domain, jobStatus.message || 'Unknown error');
-      return { 
-        status: 'failed', 
-        jobId,
-        error: jobStatus.message || 'Unknown error'
-      };
-    }
-    
-    // If completed, process the results
-    if (jobStatus.status === 'completed' && jobStatus.result) {
-      // Format the website data
-      const websiteData = await webScraper.formatScrapeResult(domain, jobStatus.result);
-      
-      // Generate personalized email
-      console.log(`Generating email for: ${name} at ${domain}`);
-      const emailDraft = await emailGenerator.generateEmail(name, email, domain, websiteData);
-      
-      // Send to Slack
-      console.log(`Sending notification to Slack for: ${email}`);
-      await slackNotifier.sendToSlack(name, email, domain, emailDraft, websiteData);
-      
+    // If job is already completed or failed, return its status
+    if (job.status === 'completed' || job.status === 'failed') {
       return {
-        status: 'completed',
-        email,
-        domain,
-        emailDraft
+        status: job.status,
+        jobId,
+        email: job.email,
+        domain: job.domain,
+        emailDraft: job.email_draft,
+        error: job.error_message
       };
+    }
+    
+    // If job is still in pending or initial state, return status
+    if (job.status === 'pending') {
+      return { status: 'pending', jobId };
+    }
+    
+    // If job is in scraping state, check the scrape job status
+    if (job.status === 'scraping' && job.scrape_job_id) {
+      const scrapeStatus = await webScraper.checkScrapeJobStatus(job.scrape_job_id);
+      
+      // If still processing, return status
+      if (scrapeStatus.status === 'processing') {
+        return { status: 'processing', jobId };
+      }
+      
+      // If there was an error or it failed, notify about the failure and update job
+      if (scrapeStatus.status === 'error' || scrapeStatus.status === 'failed') {
+        const errorMessage = scrapeStatus.message || 'Unknown error';
+        await slackNotifier.sendScrapingFailureToSlack(job.domain, errorMessage);
+        await jobStore.markJobAsFailed(jobId, errorMessage);
+        
+        return { 
+          status: 'failed', 
+          jobId,
+          error: errorMessage
+        };
+      }
+      
+      // If completed, process the results
+      if (scrapeStatus.status === 'completed' && scrapeStatus.result) {
+        // Format the website data
+        const websiteData = await webScraper.formatScrapeResult(job.domain, scrapeStatus.result);
+        
+        // Update job with scrape results
+        await jobStore.updateJobWithScrapeResult(jobId, websiteData);
+        
+        // Generate personalized email
+        console.log(`Generating email for: ${job.name} at ${job.domain}`);
+        const emailDraft = await emailGenerator.generateEmail(job.name, job.email, job.domain, websiteData);
+        
+        // Send to Slack
+        console.log(`Sending notification to Slack for: ${job.email}`);
+        await slackNotifier.sendToSlack(job.name, job.email, job.domain, emailDraft, websiteData);
+        
+        // Update job as completed
+        await jobStore.completeJobWithEmail(jobId, emailDraft);
+        
+        return {
+          status: 'completed',
+          email: job.email,
+          domain: job.domain,
+          emailDraft
+        };
+      }
+    }
+    
+    // If job is in generating_email state, it's being processed by the cron job
+    if (job.status === 'generating_email') {
+      return { status: 'processing', jobId, message: 'Email is being generated' };
     }
     
     // Fallback for unexpected status
-    return { status: 'unknown', jobId };
+    return { status: job.status || 'unknown', jobId };
   } catch (error) {
     console.error(`Error checking job status for ${jobId}:`, error);
     return { status: 'error', error: error.message };
@@ -112,62 +142,53 @@ async function checkJobStatus(jobId, email, name, domain) {
 }
 
 /**
- * Start polling for job status in the background
- * @param {string} jobId - The job ID to poll for
+ * Get jobs by status
+ * @param {string} status - Status to filter by
+ * @param {number} limit - Maximum number of jobs to return
+ * @returns {Array} Array of jobs with the specified status
  */
-function startJobPolling(jobId) {
-  const pollingInterval = 10000; // 10 seconds
-  const maxAttempts = 30; // 5 minutes total (30 * 10 seconds)
-  let attempts = 0;
-  
-  console.log(`Starting background polling for job ${jobId}`);
-  
-  const poll = async () => {
-    if (!activeJobs[jobId]) {
-      console.log(`Job ${jobId} no longer active, stopping polling`);
-      return;
-    }
-    
-    attempts++;
-    if (attempts > maxAttempts) {
-      console.log(`Max polling attempts reached for job ${jobId}, marking as timed out`);
-      activeJobs[jobId].status = 'timed_out';
-      return;
-    }
-    
-    try {
-      const jobData = activeJobs[jobId];
-      const status = await checkJobStatus(jobId, jobData.email, jobData.name, jobData.domain);
-      
-      // If job is no longer processing, we can stop polling
-      if (status.status !== 'processing') {
-        console.log(`Job ${jobId} completed with status: ${status.status}`);
-        delete activeJobs[jobId]; // Remove from active jobs
-      } else {
-        // Schedule next poll
-        setTimeout(poll, pollingInterval);
-      }
-    } catch (error) {
-      console.error(`Error polling job ${jobId}:`, error);
-      // Schedule next poll despite error
-      setTimeout(poll, pollingInterval);
-    }
-  };
-  
-  // Start polling after a short delay
-  setTimeout(poll, 5000);
+async function getJobsByStatus(status, limit = 20) {
+  try {
+    return await jobStore.getJobsByStatus(status, limit);
+  } catch (error) {
+    console.error(`Error getting jobs with status ${status}:`, error);
+    throw error;
+  }
 }
 
 /**
  * Get all active jobs
  * @returns {Object} Map of active jobs
  */
-function getActiveJobs() {
-  return { ...activeJobs };
+async function getActiveJobs() {
+  try {
+    // Get jobs that are in processing states
+    const pendingJobs = await jobStore.getPendingJobs(100);
+    
+    // Format them into a map for backwards compatibility
+    const jobsMap = {};
+    for (const job of pendingJobs) {
+      jobsMap[job.id] = {
+        jobId: job.id,
+        scrapeJobId: job.scrape_job_id,
+        status: job.status,
+        domain: job.domain,
+        email: job.email,
+        name: job.name,
+        startTime: job.created_at
+      };
+    }
+    
+    return jobsMap;
+  } catch (error) {
+    console.error('Error getting active jobs:', error);
+    return {};
+  }
 }
 
 module.exports = {
   processSignup,
   checkJobStatus,
-  getActiveJobs
+  getActiveJobs,
+  getJobsByStatus
 };

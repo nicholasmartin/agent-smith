@@ -6,6 +6,7 @@ const dns = require('dns');
 const FireCrawlApp = require('@mendable/firecrawl-js').default;
 const { z } = require('zod');
 const emailProcessor = require('./src/emailProcessor');
+const jobStore = require('./src/jobStore');
 
 const app = express();
 app.use(express.json());
@@ -27,6 +28,25 @@ app.get('/', (req, res) => {
   res.send('Agent Smith API is running');
 });
 
+// Get jobs by status endpoint
+app.get('/api/jobs/status/:status', validateApiKey, async (req, res) => {
+  try {
+    const { status } = req.params;
+    const { limit } = req.query;
+    
+    const jobs = await emailProcessor.getJobsByStatus(status, parseInt(limit) || 20);
+    
+    return res.status(200).json({
+      jobs,
+      count: jobs.length,
+      status
+    });
+  } catch (error) {
+    console.error(`Error getting jobs with status ${req.params.status}:`, error);
+    return res.status(500).json({ error: 'Error getting jobs by status' });
+  }
+});
+
 // Main API endpoint with API key validation
 app.post('/api/process-signup', validateApiKey, async (req, res) => {
   try {
@@ -45,6 +65,7 @@ app.post('/api/process-signup', validateApiKey, async (req, res) => {
       email,
       name,
       jobId: jobInfo.jobId,
+      scrapeJobId: jobInfo.scrapeJobId,
       status: jobInfo.status
     });
   } catch (error) {
@@ -56,7 +77,7 @@ app.post('/api/process-signup', validateApiKey, async (req, res) => {
 // Get all active jobs with API key validation
 app.get('/api/jobs', validateApiKey, async (req, res) => {
   try {
-    const activeJobs = emailProcessor.getActiveJobs();
+    const activeJobs = await emailProcessor.getActiveJobs();
     return res.status(200).json({
       activeJobs,
       count: Object.keys(activeJobs).length
@@ -71,14 +92,13 @@ app.get('/api/jobs', validateApiKey, async (req, res) => {
 app.get('/api/job-status/:jobId', validateApiKey, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const { email, name, domain } = req.query;
     
     if (!jobId) {
       return res.status(400).json({ error: 'Job ID is required' });
     }
     
     // Check the job status
-    const statusInfo = await emailProcessor.checkJobStatus(jobId, email, name, domain);
+    const statusInfo = await emailProcessor.checkJobStatus(jobId);
     
     return res.status(200).json(statusInfo);
   } catch (error) {

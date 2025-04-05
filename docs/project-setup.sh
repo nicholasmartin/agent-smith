@@ -8,9 +8,6 @@ npm init -y
 # Install dependencies
 npm install express axios dotenv openai
 
-# Create Netlify configuration
-touch netlify.toml
-
 # Create environment file (for local development)
 touch .env
 
