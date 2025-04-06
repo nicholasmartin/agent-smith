@@ -9,9 +9,10 @@ const supabase = require('./supabaseClient');
  * @param {string} email - User's email address
  * @param {string} name - User's name
  * @param {string} domain - Company domain
+ * @param {string} apiKey - Optional company API key for multi-tenant support
  * @returns {Object} Created job data
  */
-async function createJob(email, name, domain) {
+async function createJob(email, name, domain, apiKey = null) {
   try {
     console.log(`Creating job for ${name} (${email}) from domain ${domain}`);
     
@@ -21,6 +22,7 @@ async function createJob(email, name, domain) {
         email,
         name,
         domain,
+        api_key: apiKey,
         status: 'pending'
       })
       .select()

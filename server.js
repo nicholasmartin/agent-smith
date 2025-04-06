@@ -9,6 +9,7 @@ const { z } = require('zod');
 const emailProcessor = require('./src/emailProcessor');
 const jobStore = require('./src/jobStore');
 const processJobs = require('./api/cron/process-jobs');
+const supabase = require('./src/supabaseClient');
 
 const app = express();
 app.use(express.json());
@@ -17,15 +18,40 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API key validation middleware
-const validateApiKey = (req, res, next) => {
+const validateApiKey = async (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
-  const validApiKey = process.env.API_KEY;
+  const masterApiKey = process.env.API_KEY;
   
-  if (!apiKey || apiKey !== validApiKey) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+  // First check if it matches the master API key from environment variables (for backward compatibility)
+  if (apiKey && apiKey === masterApiKey) {
+    next();
+    return;
   }
   
-  next();
+  // If not the master key, check if it's a valid company API key in the database
+  try {
+    if (apiKey) {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('api_key', apiKey)
+        .eq('active', true)
+        .single();
+      
+      if (data && !error) {
+        // Valid company API key
+        console.log(`Request authenticated for company: ${data.name}`);
+        next();
+        return;
+      }
+    }
+    
+    // If we get here, the API key is invalid
+    return res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+  } catch (error) {
+    console.error('Error validating API key:', error);
+    return res.status(500).json({ error: 'Error validating API key' });
+  }
 };
 
 // Health check endpoint
@@ -64,8 +90,11 @@ app.post('/api/process-signup', validateApiKey, async (req, res) => {
       return res.status(400).json({ error: 'Email and name are required' });
     }
     
+    // Extract API key from headers for multi-tenant support
+    const apiKey = req.headers['x-api-key'];
+    
     // Start the signup processing and get job info
-    const jobInfo = await emailProcessor.processSignup(email, name);
+    const jobInfo = await emailProcessor.processSignup(email, name, apiKey);
     
     // Return job information to the client
     return res.status(202).json({ 

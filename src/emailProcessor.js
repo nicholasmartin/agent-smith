@@ -8,9 +8,10 @@ const jobStore = require('./jobStore');
  * Process a new signup by checking the domain and starting the scraping job
  * @param {string} email - User's email address
  * @param {string} name - User's name
+ * @param {string} apiKey - Optional company API key for multi-tenant support
  * @returns {Object} Job information
  */
-async function processSignup(email, name) {
+async function processSignup(email, name, apiKey = null) {
   try {
     // Step 1: Check if it's a business domain
     const { isDomainFree, domain } = domainChecker.checkDomain(email);
@@ -23,7 +24,7 @@ async function processSignup(email, name) {
     
     // Step 2: Create a job record in the database
     console.log(`Creating job record for ${name} (${email}) from domain ${domain}`);
-    const job = await jobStore.createJob(email, name, domain);
+    const job = await jobStore.createJob(email, name, domain, apiKey);
     
     // Step 3: Start the website scraping job
     console.log(`Starting scrape job for domain: ${domain}`);
@@ -110,7 +111,8 @@ async function checkJobStatus(jobId) {
         
         // Generate personalized email
         console.log(`Generating email for: ${job.name} at ${job.domain}`);
-        const emailDraft = await emailGenerator.generateEmail(job.name, job.email, job.domain, websiteData);
+        // Pass the API key to the email generator for multi-tenant support
+        const emailDraft = await emailGenerator.generateEmail(job.name, job.email, job.domain, websiteData, job.api_key);
         
         // Send to Slack
         console.log(`Sending notification to Slack for: ${job.email}`);

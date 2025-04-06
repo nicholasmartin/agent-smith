@@ -1,4 +1,5 @@
 const { OpenAI } = require('openai');
+const { getCompanyByApiKey, getCompanyPromptTemplate } = require('./companyManager');
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -11,11 +12,50 @@ const openai = new OpenAI({
  * @param {string} email - Recipient's email
  * @param {string} domain - Company domain
  * @param {Object} websiteData - Scraped website data
+ * @param {string} apiKey - Optional company API key for multi-tenant support
  * @returns {Object} Generated email with subject and body
  */
-async function generateEmail(name, email, domain, websiteData) {
+async function generateEmail(name, email, domain, websiteData, apiKey = null) {
   try {
-    const prompt = createPrompt(name, email, domain, websiteData);
+    // Default company info (fallback for backward compatibility)
+    let companyInfo = {
+      name: 'MagLoft',
+      description: 'MagLoft specializes in software solutions for print and digital publishers. We provide complete solutions for pdf to html conversions, mobile app and web app solutions, custom development and integration services.'
+    };
+    
+    let promptSettings = {
+      tone: 'conversational',
+      style: 'formal',
+      maxLength: 200
+    };
+
+    // If API key is provided, get company-specific information
+    if (apiKey) {
+      try {
+        const company = await getCompanyByApiKey(apiKey);
+        const promptTemplate = await getCompanyPromptTemplate(company.id);
+        
+        companyInfo = {
+          name: company.name,
+          description: company.description || companyInfo.description
+        };
+        
+        promptSettings = {
+          tone: promptTemplate.tone || promptSettings.tone,
+          style: promptTemplate.style || promptSettings.style,
+          maxLength: promptTemplate.max_length || promptSettings.maxLength,
+          template: promptTemplate.template
+        };
+      } catch (error) {
+        console.error('Error fetching company information:', error);
+        // Fall back to default if company lookup fails
+      }
+    }
+
+    // Use company-specific template if available, otherwise use default template
+    const prompt = promptSettings.template 
+      ? processCustomTemplate(promptSettings.template, name, email, domain, websiteData, companyInfo, promptSettings)
+      : createDefaultPrompt(name, email, domain, websiteData, companyInfo, promptSettings);
     
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // Using GPT-3.5 Turbo as a replacement for GPT-4 Mini
@@ -42,7 +82,7 @@ async function generateEmail(name, email, domain, websiteData) {
     } catch (e) {
       // If not in JSON format, do simple parsing based on Subject/Body markers
       const subjectMatch = content.match(/Subject:(.*?)(\n|$)/i);
-      const subject = subjectMatch ? subjectMatch[1].trim() : `Welcome to our product, ${name}!`;
+      const subject = subjectMatch ? subjectMatch[1].trim() : `Welcome to ${companyInfo.name}, ${name}!`;
       
       // Everything after "Body:" or the entire content if no markers
       const bodyMatch = content.match(/Body:(.*)/is);
@@ -62,9 +102,29 @@ async function generateEmail(name, email, domain, websiteData) {
 }
 
 /**
- * Create prompt for OpenAI based on website data
+ * Process custom prompt template with variables
  */
-function createPrompt(name, email, domain, websiteData) {
+function processCustomTemplate(template, name, email, domain, websiteData, companyInfo, promptSettings) {
+  // Replace template variables with actual values
+  return template
+    .replace(/\${name}/g, name)
+    .replace(/\${email}/g, email)
+    .replace(/\${domain}/g, domain)
+    .replace(/\${companyName}/g, websiteData.companyName || domain)
+    .replace(/\${websiteSummary}/g, websiteData.summary || 'Not available')
+    .replace(/\${websiteContent}/g, websiteData.pageText ? websiteData.pageText.substring(0, 1000) + '...' : 'Not available')
+    .replace(/\${services}/g, websiteData.services && websiteData.services.length > 0 ? websiteData.services.join(', ') : 'Not specified')
+    .replace(/\${ourCompanyName}/g, companyInfo.name)
+    .replace(/\${ourCompanyDescription}/g, companyInfo.description)
+    .replace(/\${tone}/g, promptSettings.tone)
+    .replace(/\${style}/g, promptSettings.style)
+    .replace(/\${maxLength}/g, promptSettings.maxLength);
+}
+
+/**
+ * Create default prompt for OpenAI based on website data
+ */
+function createDefaultPrompt(name, email, domain, websiteData, companyInfo, promptSettings) {
   return `
 Create a personalized email for a new free trial signup with the following information:
 
@@ -83,9 +143,10 @@ Instructions:
 1. Write a brief, personalized email welcoming them to the free trial
 2. Reference their company name and business
 3. Mention how our product might help their specific needs based on their website
-4. Keep in mind that our company (MagLoft) specializes in software solutions for print and digital publishers. We provide complete solutions for pdf to html conversions, mobile app and web app solutions, custom development and integration services.
-5. Keep it under 200 words and conversational in tone
-6. Include a question for the new free trial at the end to try and get a reply.
+4. Keep in mind that our company (${companyInfo.name}) ${companyInfo.description}
+5. Keep it under ${promptSettings.maxLength} words and ${promptSettings.tone} in tone
+6. Use a ${promptSettings.style} style
+7. Include a question for the new free trial at the end to try and get a reply.
 
 Format your response as a JSON object with 'subject' and 'body' fields.
 `;
