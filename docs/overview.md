@@ -10,6 +10,14 @@ AI Generation: OpenAI API
 Notification: Slack Webhook
 Authentication: Simple API key validation
 
+flowchart TD
+    A[Company API Call] --> B[Express Server]
+    B --> C{Check Email Domain}
+    C -->|Free Domain| D[Ignore]
+    C -->|Business Domain| E[Firecrawl Scraper]
+    E --> F[OpenAI API]
+    F --> G[Slack Webhook]
+
 Core Components
 
 MVP System ArchitectureDiagram: @docs/system-architecture.mermaid
@@ -60,7 +68,7 @@ Invoke-WebRequest -Uri "https://agent-smith.magloft.com/api/process-signup" `
     "Content-Type" = "application/json"
     "X-API-Key" = "em4il_p3rs0n_ag3nt_hj49dh4kl0s74jh31"
   } `
-  -Body '{"email":"shawn@pastryartsmag.com","name":"Shawn Wenner"}'
+  -Body '{"email":"markus.luethi@e-publish.ch","name":"Markus Luethi"}'
 
 
 Invoke-WebRequest -Uri "https://agent-smith.magloft.com/api/jobs" `

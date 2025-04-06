@@ -3,51 +3,314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Smith</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Agent Smith | AI-Powered Email Personalization</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/3b49ef8fb1.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <header>
-        <h1>Agent Smith API</h1>
-    </header>
-    
-    <nav>
-        <a href="index.html" class="active">Home</a>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="new-signup.html">New Signup</a>
-    </nav>
-    <div class="container">
-        <p>Welcome to the Agent Smith API service. This API processes new signup information, researches business domains, and generates personalized email drafts.</p>
-        
-        <h2>API Status</h2>
-        <p>The API is currently running and ready to accept requests.</p>
-        
-        <div class="endpoint">
-            <h3>Main Endpoint</h3>
-            <p><strong>POST</strong> /api/process-signup</p>
-            <p>Processes a new signup and generates a personalized email draft.</p>
-            <p><strong>Headers:</strong></p>
-            <pre><code>Content-Type: application/json
-X-API-Key: your-api-key-here</code></pre>
-            <p><strong>Request Body:</strong></p>
-            <pre><code>{
-  "email": "john@acmecorp.com",
-  "name": "John Smith"
-}</code></pre>
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-text">Agent<span class="highlight">Smith</span></span>
+            </div>
         </div>
-    </div>
-    
-    <div class="container">
-        <h2>Web Interface</h2>
-        <p>Agent Smith provides a web interface for managing jobs and submitting new signups:</p>
-        <ul>
-            <li><a href="dashboard.html">Dashboard</a> - View and manage all jobs</li>
-            <li><a href="new-signup.html">New Signup</a> - Submit a new signup for processing</li>
-        </ul>
-    </div>
-    
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-grid">
+                <div class="hero-content">
+                    <h1>Turn New Signups Into <span class="gradient-text">Personalized Relationships</span></h1>
+                    <p class="hero-subtitle">Our AI agent researches your subscribers' businesses and crafts personalized welcome emails that feel human-written.</p>
+                    <div class="hero-cta">
+                        <a href="#signup" class="button primary">Get Started</a>
+                        <a href="#how-it-works" class="button secondary">How It Works</a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-image">
+                        <img src="https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80" alt="AI Email Personalization">
+                    </div>
+                    <div class="floating-card card-1">
+                        <i class="fas fa-robot"></i>
+                        <span>AI-Powered Research</span>
+                    </div>
+                    <div class="floating-card card-2">
+                        <i class="fas fa-envelope-open-text"></i>
+                        <span>Personalized Emails</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="problem-solution">
+        <div class="container">
+            <div class="comparison-grid">
+                <div class="comparison-item problem">
+                    <div class="comparison-header">
+                        <i class="fas fa-times-circle"></i>
+                        <h3>The Problem</h3>
+                    </div>
+                    <p>Generic "Thanks for subscribing!" emails that get ignored and damage your first impression</p>
+                </div>
+                <div class="comparison-item solution">
+                    <div class="comparison-header">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>Our Solution</h3>
+                    </div>
+                    <p>Personalized welcome emails that show you've done your homework and care about your subscribers</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2>How It Works</h2>
+                <p>Four simple steps to personalized welcome emails</p>
+            </div>
+            <div class="process-grid">
+                <div class="process-item">
+                    <div class="process-number">1</div>
+                    <div class="process-content">
+                        <h3>They Sign Up</h3>
+                        <p>You capture their email address and business domain</p>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-number">2</div>
+                    <div class="process-content">
+                        <h3>We Research</h3>
+                        <p>Our AI scrapes their website for relevant information</p>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-number">3</div>
+                    <div class="process-content">
+                        <h3>AI Generates</h3>
+                        <p>A tailored welcome email is crafted based on their business</p>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-number">4</div>
+                    <div class="process-content">
+                        <h3>You Connect</h3>
+                        <p>Send the personalized email and start a meaningful relationship</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Key Features</h2>
+                <p>Why businesses choose Agent Smith for their welcome emails</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-plug"></i>
+                    </div>
+                    <h3>Works With Everything</h3>
+                    <p>Integrates with any email platform or CRM you're already using</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Lightning Fast</h3>
+                    <p>Get personalized emails in seconds, not hours or days</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>AI-Powered Research</h3>
+                    <p>Automatically discovers relevant information about your subscribers</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h3>Human-Like Writing</h3>
+                    <p>Emails that sound like they were written by you, not a robot</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonial">
+        <div class="container">
+            <div class="testimonial-card">
+                <div class="quote-mark"><i class="fas fa-quote-left"></i></div>
+                <p class="testimonial-text">Agent Smith has completely transformed our onboarding process. Our response rates have increased by 340% and new subscribers are impressed by how well we understand their business from day one.</p>
+                <div class="testimonial-author">
+                    <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Testimonial Author" class="author-image">
+                    <div class="author-info">
+                        <h4>Sarah Johnson</h4>
+                        <p>Marketing Director, TechFlow</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2>Simple, Transparent Pricing</h2>
+                <p>No hidden fees. No complicated tiers.</p>
+            </div>
+            <div class="pricing-card">
+                <div class="pricing-header">
+                    <h3>Professional Plan</h3>
+                    <div class="price">
+                        <span class="currency">$</span>
+                        <span class="amount">29</span>
+                        <span class="period">one-time payment</span>
+                    </div>
+                </div>
+                <ul class="pricing-features">
+                    <li><i class="fas fa-check"></i> Unlimited personalized emails</li>
+                    <li><i class="fas fa-check"></i> Advanced AI research</li>
+                    <li><i class="fas fa-check"></i> API access</li>
+                    <li><i class="fas fa-check"></i> Email template customization</li>
+                    <li><i class="fas fa-check"></i> 30-day money-back guarantee</li>
+                </ul>
+                <a href="#signup" class="button primary full-width">Get Started Now</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq">
+        <div class="container">
+            <div class="section-header">
+                <h2>Frequently Asked Questions</h2>
+                <p>Everything you need to know about Agent Smith</p>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h3>Will this work with my email platform?</h3>
+                    <p>Yes. Agent Smith is platform-agnostic and works with any email service or CRM you're currently using.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Do I need technical skills?</h3>
+                    <p>Not at all. If you can copy and paste, you have all the technical skills required to use Agent Smith.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Is the AI research ethical?</h3>
+                    <p>Absolutely. We only use publicly available information from company websites. No personal data is collected.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>How long does it take to generate an email?</h3>
+                    <p>Most emails are generated within 30-60 seconds after a signup is processed.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="signup" class="signup">
+        <div class="container">
+            <div class="signup-grid">
+                <div class="signup-content">
+                    <h2>Start Sending Personalized Emails Today</h2>
+                    <p>Join thousands of businesses already using Agent Smith to make meaningful first impressions.</p>
+                    <ul class="signup-benefits">
+                        <li><i class="fas fa-check"></i> Set up in under 2 minutes</li>
+                        <li><i class="fas fa-check"></i> No credit card required to try</li>
+                        <li><i class="fas fa-check"></i> 30-day money-back guarantee</li>
+                    </ul>
+                </div>
+                <div class="signup-form-container">
+                    <form id="registration-form" class="signup-form">
+                        <div class="form-group">
+                            <label for="name">Full Name</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Business Email</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="company">Company Name</label>
+                            <input type="text" id="company" name="company">
+                        </div>
+                        <button type="submit" class="button primary full-width">Create Your Account</button>
+                        <p class="form-disclaimer">By signing up, you agree to our Terms of Service and Privacy Policy.</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <footer>
-        <p>Agent Smith - Email Personalization Service</p>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <span class="logo-text">Agent<span class="highlight">Smith</span></span>
+                    </div>
+                    <p>AI-powered email personalization that creates meaningful connections with your subscribers.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-links-column">
+                        <h4>Product</h4>
+                        <ul>
+                            <li><a href="#">Features</a></li>
+                            <li><a href="#">Pricing</a></li>
+                            <li><a href="#">API</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="#">About</a></li>
+                            <li><a href="#">Blog</a></li>
+                            <li><a href="#">Careers</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Legal</h4>
+                        <ul>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                            <li><a href="#">Cookie Policy</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Agent Smith. All rights reserved.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
     </footer>
+
+    <script>
+        document.getElementById('registration-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const company = document.getElementById('company').value;
+            
+            // Here you would normally send this data to your backend
+            console.log('Form submitted:', { name, email, company });
+            
+            // For demo purposes, show a success message
+            alert('Thanks for registering! We\'ll be in touch shortly.');
+            this.reset();
+        });
+    </script>
 </body>
 </html>
