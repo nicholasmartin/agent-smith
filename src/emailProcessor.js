@@ -13,6 +13,8 @@ const jobStore = require('./jobStore');
  */
 async function processSignup(email, name, apiKey = null) {
   try {
+    console.log(`[EmailProcessor] Processing signup for ${email} with API key: ${apiKey}`);
+    
     // Step 1: Check if it's a business domain
     const { isDomainFree, domain } = domainChecker.checkDomain(email);
     
@@ -23,8 +25,9 @@ async function processSignup(email, name, apiKey = null) {
     }
     
     // Step 2: Create a job record in the database
-    console.log(`Creating job record for ${name} (${email}) from domain ${domain}`);
+    console.log(`Creating job record for ${name} (${email}) from domain ${domain} with API key: ${apiKey}`);
     const job = await jobStore.createJob(email, name, domain, apiKey);
+    console.log(`[EmailProcessor] Job created with ID: ${job.id}, API key stored: ${job.api_key}`);
     
     // Step 3: Start the website scraping job
     console.log(`Starting scrape job for domain: ${domain}`);
@@ -111,6 +114,7 @@ async function checkJobStatus(jobId) {
         
         // Generate personalized email
         console.log(`Generating email for: ${job.name} at ${job.domain}`);
+        console.log(`[EmailProcessor] Using API key for email generation: ${job.api_key}`);
         // Pass the API key to the email generator for multi-tenant support
         const emailDraft = await emailGenerator.generateEmail(job.name, job.email, job.domain, websiteData, job.api_key);
         

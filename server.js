@@ -92,9 +92,11 @@ app.post('/api/process-signup', validateApiKey, async (req, res) => {
     
     // Extract API key from headers for multi-tenant support
     const apiKey = req.headers['x-api-key'];
+    console.log(`[Server] Processing signup with API key: ${apiKey}`);
     
     // Start the signup processing and get job info
     const jobInfo = await emailProcessor.processSignup(email, name, apiKey);
+    console.log(`[Server] Job created with ID: ${jobInfo.jobId}, API key used: ${apiKey}`);
     
     // Return job information to the client
     return res.status(202).json({ 

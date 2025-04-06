@@ -17,11 +17,15 @@ const openai = new OpenAI({
  */
 async function generateEmail(name, email, domain, websiteData, apiKey = null) {
   try {
+    console.log(`[EmailGenerator] Generating email with API key: ${apiKey}`);
+    
     // Default company info (fallback for backward compatibility)
     let companyInfo = {
       name: 'MagLoft',
       description: 'MagLoft specializes in software solutions for print and digital publishers. We provide complete solutions for pdf to html conversions, mobile app and web app solutions, custom development and integration services.'
     };
+    
+    console.log(`[EmailGenerator] Default company info set to: ${companyInfo.name}`);
     
     let promptSettings = {
       tone: 'conversational',
@@ -31,14 +35,18 @@ async function generateEmail(name, email, domain, websiteData, apiKey = null) {
 
     // If API key is provided, get company-specific information
     if (apiKey) {
+      console.log(`[EmailGenerator] Looking up company for API key: ${apiKey}`);
       try {
         const company = await getCompanyByApiKey(apiKey);
+        console.log(`[EmailGenerator] Found company: ${company ? company.name : 'Not found'}`);
         const promptTemplate = await getCompanyPromptTemplate(company.id);
+        console.log(`[EmailGenerator] Found template: ${promptTemplate ? promptTemplate.name : 'Not found'}`);
         
         companyInfo = {
           name: company.name,
           description: company.description || companyInfo.description
         };
+        console.log(`[EmailGenerator] Updated company info to: ${companyInfo.name}`);
         
         promptSettings = {
           tone: promptTemplate.tone || promptSettings.tone,
@@ -46,16 +54,26 @@ async function generateEmail(name, email, domain, websiteData, apiKey = null) {
           maxLength: promptTemplate.max_length || promptSettings.maxLength,
           template: promptTemplate.template
         };
+        console.log(`[EmailGenerator] Using custom template: ${promptSettings.template ? 'Yes' : 'No'}`);
+        console.log(`[EmailGenerator] Template settings - Tone: ${promptSettings.tone}, Style: ${promptSettings.style}`);
+        console.log(`[EmailGenerator] Template max length: ${promptSettings.maxLength}`);
       } catch (error) {
         console.error('Error fetching company information:', error);
+        console.log(`[EmailGenerator] Error details: ${JSON.stringify(error.message || error)}`);
+        console.log(`[EmailGenerator] Falling back to default company info`);
         // Fall back to default if company lookup fails
       }
     }
 
     // Use company-specific template if available, otherwise use default template
-    const prompt = promptSettings.template 
+    const useCustomTemplate = !!promptSettings.template;
+    console.log(`[EmailGenerator] Using ${useCustomTemplate ? 'custom' : 'default'} template`);
+    
+    const prompt = useCustomTemplate
       ? processCustomTemplate(promptSettings.template, name, email, domain, websiteData, companyInfo, promptSettings)
       : createDefaultPrompt(name, email, domain, websiteData, companyInfo, promptSettings);
+    
+    console.log(`[EmailGenerator] Final company name in prompt: ${companyInfo.name}`);
     
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo", // Using GPT-3.5 Turbo as a replacement for GPT-4 Mini

@@ -147,9 +147,9 @@ Invoke-WebRequest -Uri "https://agent-smith.magloft.com/api/process-signup" `
   -Method POST `
   -Headers @{
     "Content-Type" = "application/json"
-    "X-API-Key" = "em4il_p3rs0n_ag3nt_hj49dh4kl0s74jh31"
+    "X-API-Key" = "as_987654321"
   } `
-  -Body '{"email":"markus.luethi@e-publish.ch","name":"Markus Luethi"}'
+  -Body '{"email":"shawn@pastryartsmag.com","name":"Shawn Wenner"}'
 
 
 Invoke-WebRequest -Uri "https://agent-smith.magloft.com/api/jobs" `
