@@ -133,11 +133,13 @@ async function processJob(job) {
       await jobStore.updateJobWithScrapeResult(job.id, websiteData);
       
       // Generate personalized email
+      console.log(`[ProcessJobs] Generating email with API key from job: ${job.api_key}`);
       const emailDraft = await emailGenerator.generateEmail(
         job.name, 
         job.email, 
         job.domain, 
-        websiteData
+        websiteData,
+        job.api_key // Pass the API key from the job record
       );
       
       // Send to Slack
@@ -166,11 +168,13 @@ async function processJob(job) {
   // If job is in generating_email state, continue with email generation
   else if (job.status === 'generating_email' && job.scrape_result) {
     // Generate personalized email
+    console.log(`[ProcessJobs] Generating email with API key from job: ${job.api_key}`);
     const emailDraft = await emailGenerator.generateEmail(
       job.name, 
       job.email, 
       job.domain, 
-      job.scrape_result
+      job.scrape_result,
+      job.api_key // Pass the API key from the job record
     );
     
     // Send to Slack
