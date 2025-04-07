@@ -92,6 +92,8 @@ function setupSignupForm() {
 // Poll for job status updates
 function pollJobStatus(jobId, interval = 5000, maxAttempts = 12) {
   let attempts = 0;
+  let lastStatus = null;
+  let stuckInScraping = false;
   
   const statusCheck = async () => {
     try {
@@ -116,10 +118,25 @@ function pollJobStatus(jobId, interval = 5000, maxAttempts = 12) {
       // Update status display
       updateJobStatusDisplay(data);
       
+      // Track if we're stuck in scraping
+      if (data.status === 'scraping') {
+        if (lastStatus === 'scraping') {
+          stuckInScraping = true;
+        }
+      } else {
+        stuckInScraping = false;
+      }
+      
+      lastStatus = data.status;
+      
       // Continue polling if job is still in progress
       attempts++;
       if (data.status !== 'completed' && data.status !== 'failed' && attempts < maxAttempts) {
         setTimeout(statusCheck, interval);
+      } else if (stuckInScraping && attempts >= maxAttempts) {
+        // Do one final check after a longer timeout if we appear stuck in scraping
+        console.log('Job appears stuck in scraping status, will perform one final check in 10 seconds');
+        setTimeout(statusCheck, 10000);
       }
       
     } catch (error) {
