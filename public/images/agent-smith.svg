@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800px" height="1000px" viewBox="0 0 800 1000" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Agent Smith Character</title>
+    <g id="agent-smith" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <!-- Hair -->
+        <path d="M400,50 C250,50 200,200 200,300 C200,400 250,500 300,550 C350,600 400,600 400,600 C400,600 450,600 500,550 C550,500 600,400 600,300 C600,200 550,50 400,50 Z" fill="#5D4037" />
+        
+        <!-- Face -->
+        <path d="M400,150 C300,150 250,250 250,350 C250,450 300,600 400,600 C500,600 550,450 550,350 C550,250 500,150 400,150 Z" fill="#FFCCBC" />
+        
+        <!-- Ears -->
+        <ellipse cx="250" cy="350" rx="30" ry="50" fill="#FFCCBC" />
+        <ellipse cx="550" cy="350" rx="30" ry="50" fill="#FFCCBC" />
+        
+        <!-- Earpiece -->
+        <path d="M250,350 C240,350 235,360 235,370 C235,380 240,390 250,390 L260,390 C260,390 265,380 265,370 C265,360 260,350 250,350 Z" fill="#000000" />
+        
+        <!-- Eyebrows -->
+        <path d="M300,280 C320,270 340,270 360,280" stroke="#3E2723" stroke-width="10" stroke-linecap="round" />
+        <path d="M440,280 C460,270 480,270 500,280" stroke="#3E2723" stroke-width="10" stroke-linecap="round" />
+        
+        <!-- Sunglasses -->
+        <rect x="290" y="300" width="100" height="60" rx="10" fill="#212121" />
+        <rect x="410" y="300" width="100" height="60" rx="10" fill="#212121" />
+        <path d="M390,310 L410,310" stroke="#000000" stroke-width="5" />
+        <path d="M290,310 L270,290" stroke="#000000" stroke-width="5" />
+        <path d="M510,310 L530,290" stroke="#000000" stroke-width="5" />
+        
+        <!-- Nose -->
+        <path d="M400,350 C390,370 390,400 400,420 C410,400 410,370 400,350 Z" fill="#FFCCBC" />
+        
+        <!-- Mouth/Smile -->
+        <path d="M350,450 C370,470 430,470 450,450" stroke="#5D4037" stroke-width="5" stroke-linecap="round" fill="none" />
+        
+        <!-- Suit -->
+        <path d="M300,600 L300,900 L500,900 L500,600 C450,650 350,650 300,600 Z" fill="#263238" />
+        
+        <!-- Shirt Collar -->
+        <path d="M350,600 L330,650 L400,700 L470,650 L450,600 Z" fill="#FFFFFF" />
+        
+        <!-- Tie -->
+        <path d="M400,650 L380,700 L400,900 L420,700 Z" fill="#000000" />
+        
+        <!-- Suit Lapels -->
+        <path d="M350,600 L330,650 L300,600 Z" fill="#37474F" />
+        <path d="M450,600 L470,650 L500,600 Z" fill="#37474F" />
+        
+        <!-- Suit Pocket -->
+        <rect x="450" y="700" width="30" height="20" rx="5" fill="#37474F" />
+        
+        <!-- Suit Buttons -->
+        <circle cx="400" cy="750" r="10" fill="#37474F" />
+    </g>
+</svg>
