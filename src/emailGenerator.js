@@ -1,5 +1,6 @@
 const { OpenAI } = require('openai');
 const { getCompanyByApiKey, getCompanyPromptTemplate } = require('./companyManager');
+const supabase = require('./supabaseClient');
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -13,9 +14,10 @@ const openai = new OpenAI({
  * @param {string} domain - Company domain
  * @param {Object} websiteData - Scraped website data
  * @param {string} apiKey - Optional company API key for multi-tenant support
+ * @param {string} companyId - Optional company ID for direct company lookup
  * @returns {Object} Generated email with subject and body
  */
-async function generateEmail(name, email, domain, websiteData, apiKey = null) {
+async function generateEmail(name, email, domain, websiteData, apiKey = null, companyId = null) {
   try {
     console.log(`[EmailGenerator] Generating email with API key: ${apiKey}`);
     
@@ -33,13 +35,39 @@ async function generateEmail(name, email, domain, websiteData, apiKey = null) {
       maxLength: 200
     };
 
-    // If API key is provided, get company-specific information
-    if (apiKey) {
-      console.log(`[EmailGenerator] Looking up company for API key: ${apiKey}`);
+    // Determine company info - first try direct company ID (preferred), then fallback to API key
+    let company = null;
+    let promptTemplate = null;
+    
+    if (companyId) {
+      console.log(`[EmailGenerator] Looking up company by ID: ${companyId}`);
       try {
-        const company = await getCompanyByApiKey(apiKey);
-        console.log(`[EmailGenerator] Found company: ${company ? company.name : 'Not found'}`);
-        const promptTemplate = await getCompanyPromptTemplate(company.id);
+        const { data, error } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('id', companyId)
+          .single();
+        
+        if (error) throw error;
+        company = data;
+        console.log(`[EmailGenerator] Found company by ID: ${company ? company.name : 'Not found'}`);
+      } catch (error) {
+        console.error(`[EmailGenerator] Error looking up company by ID:`, error);
+      }
+    } else if (apiKey) {
+      console.log(`[EmailGenerator] Looking up company by API key: ${apiKey}`);
+      try {
+        company = await getCompanyByApiKey(apiKey);
+        console.log(`[EmailGenerator] Found company by API key: ${company ? company.name : 'Not found'}`);
+      } catch (error) {
+        console.error(`[EmailGenerator] Error looking up company by API key:`, error);
+      }
+    }
+    
+    // If we found a company, get its prompt template and update our settings
+    if (company && company.id) {
+      try {
+        promptTemplate = await getCompanyPromptTemplate(company.id);
         console.log(`[EmailGenerator] Found template: ${promptTemplate ? promptTemplate.name : 'Not found'}`);
         
         companyInfo = {

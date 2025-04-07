@@ -129,15 +129,17 @@ async function checkJobStatus(jobId) {
         console.log(`Generating email for: ${job.name} at ${job.domain}`);
         console.log(`[EmailProcessor] Using company ID for template selection: ${job.company_id}`);
         
-        // Get company information for template selection
-        const { data: company } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', job.company_id)
-          .single();
-        
-        // Pass the company info to the email generator for multi-tenant support
-        const emailDraft = await emailGenerator.generateEmail(job.name, job.email, job.domain, websiteData, company?.api_key);
+        // Pass both the API key and company ID to the email generator for reliable template selection
+        // The emailGenerator will prioritize company ID over API key
+        console.log(`[EmailProcessor] Using company ID for template selection: ${job.company_id}`);
+        const emailDraft = await emailGenerator.generateEmail(
+          job.name, 
+          job.email, 
+          job.domain, 
+          websiteData, 
+          null, // API key no longer needed since we're passing company ID directly
+          job.company_id // Pass company ID directly
+        );
         
         // Send to Slack
         console.log(`Sending notification to Slack for: ${job.email}`);
