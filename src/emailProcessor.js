@@ -3,6 +3,7 @@ const webScraper = require('./webScraper');
 const emailGenerator = require('./emailGenerator');
 const slackNotifier = require('./slackNotifier');
 const jobStore = require('./jobStore');
+const supabase = require('./supabaseClient');
 
 /**
  * Process a new signup by checking the domain and starting the scraping job
@@ -126,9 +127,17 @@ async function checkJobStatus(jobId) {
         
         // Generate personalized email
         console.log(`Generating email for: ${job.name} at ${job.domain}`);
-        console.log(`[EmailProcessor] Using API key for email generation: ${job.api_key}`);
-        // Pass the API key to the email generator for multi-tenant support
-        const emailDraft = await emailGenerator.generateEmail(job.name, job.email, job.domain, websiteData, job.api_key);
+        console.log(`[EmailProcessor] Using company ID for template selection: ${job.company_id}`);
+        
+        // Get company information for template selection
+        const { data: company } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('id', job.company_id)
+          .single();
+        
+        // Pass the company info to the email generator for multi-tenant support
+        const emailDraft = await emailGenerator.generateEmail(job.name, job.email, job.domain, websiteData, company?.api_key);
         
         // Send to Slack
         console.log(`Sending notification to Slack for: ${job.email}`);
