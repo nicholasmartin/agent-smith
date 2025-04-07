@@ -3,6 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const https = require('https');
 const dns = require('dns');
+const crypto = require('crypto');
 const path = require('path');
 const FireCrawlApp = require('@mendable/firecrawl-js').default;
 const { z } = require('zod');
@@ -10,6 +11,7 @@ const emailProcessor = require('./src/emailProcessor');
 const jobStore = require('./src/jobStore');
 const processJobs = require('./api/cron/process-jobs');
 const supabase = require('./src/supabaseClient');
+const keyManager = require('./src/keyManager');
 
 const app = express();
 app.use(express.json());
@@ -17,30 +19,68 @@ app.use(express.json());
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Rate limiter middleware for API endpoints
+const apiLimiter = require('express-rate-limit')({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later' }
+});
+
+// More strict rate limiter for website form submissions
+const formLimiter = require('express-rate-limit')({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // limit each IP to 10 form submissions per hour
+  message: { error: 'Too many form submissions, please try again later' }
+});
+
+// Website form secret validation middleware
+const validateWebsiteSecret = (req, res, next) => {
+  const websiteSecret = req.headers['x-website-secret'];
+  const expectedSecret = process.env.WEBSITE_FORM_SECRET;
+  
+  if (!websiteSecret || websiteSecret !== expectedSecret) {
+    return res.status(403).json({ error: 'Invalid website form secret' });
+  }
+  
+  next();
+};
+
 // API key validation middleware
 const validateApiKey = async (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
   const masterApiKey = process.env.API_KEY;
+  const endpoint = req.path.split('/')[1]; // Extract endpoint from path
   
-  // First check if it matches the master API key from environment variables (for backward compatibility)
+  // First check if it matches the master API key from environment variables (for backward compatibility during transition)
   if (apiKey && apiKey === masterApiKey) {
+    // Admin key has full access
+    req.company = {
+      id: null,
+      name: 'System Administrator',
+      slug: 'admin'
+    };
     next();
     return;
   }
   
-  // If not the master key, check if it's a valid company API key in the database
+  // Check if it's a valid secure API key in the new system
   try {
     if (apiKey) {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name')
-        .eq('api_key', apiKey)
-        .eq('active', true)
-        .single();
+      // Use keyManager to validate the API key
+      const apiInfo = await keyManager.validateApiKey(apiKey, endpoint);
       
-      if (data && !error) {
-        // Valid company API key
-        console.log(`Request authenticated for company: ${data.name}`);
+      if (apiInfo) {
+        // Valid API key
+        console.log(`Request authenticated for company: ${apiInfo.companyName}`);
+        
+        // Add company info to request for downstream use
+        req.company = {
+          id: apiInfo.companyId,
+          name: apiInfo.companyName,
+          slug: apiInfo.companySlug,
+          keyId: apiInfo.keyId
+        };
+        
         next();
         return;
       }
@@ -53,6 +93,99 @@ const validateApiKey = async (req, res, next) => {
     return res.status(500).json({ error: 'Error validating API key' });
   }
 };
+
+// Website form submission endpoint with special protection
+app.post('/api/website-signup', formLimiter, validateWebsiteSecret, async (req, res) => {
+  try {
+    const { email, name } = req.body;
+    
+    if (!email || !name) {
+      return res.status(400).json({ error: 'Email and name are required' });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    
+    // Check for business email (no free providers)
+    const domain = email.split('@')[1].toLowerCase();
+    const personalDomains = [
+      'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
+      'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com',
+      'gmx.com', 'live.com', 'me.com', 'inbox.com', 'mail.ru'
+    ];
+    
+    if (personalDomains.includes(domain)) {
+      return res.status(400).json({ error: 'Please use your business email address' });
+    }
+    
+    // Get Agent Smith company for website submissions
+    const { data: agentSmithCompany, error: companyError } = await supabase
+      .from('companies')
+      .select('id, default_api_key_id')
+      .eq('slug', 'agent-smith')
+      .eq('active', true)
+      .single();
+    
+    if (companyError || !agentSmithCompany) {
+      console.error('Error finding Agent Smith company:', companyError);
+      return res.status(500).json({ error: 'Error processing website submission' });
+    }
+    
+    // Process the signup with Agent Smith company info
+    const jobInfo = await emailProcessor.processSignup(
+      email, 
+      name, 
+      agentSmithCompany.default_api_key_id,
+      agentSmithCompany.id,
+      true // fromWebsite flag
+    );
+    
+    console.log(`[Server] Website form submission processed, Job ID: ${jobInfo.jobId}`);
+    
+    // Return job information to the client
+    return res.status(202).json({ 
+      message: 'Signup received and being processed',
+      email,
+      name,
+      jobId: jobInfo.jobId,
+      scrapeJobId: jobInfo.scrapeJobId,
+      status: jobInfo.status
+    });
+  } catch (error) {
+    console.error('Website form submission error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Serve the WEBSITE_FORM_SECRET as a JavaScript variable
+// This keeps the secret on the server but makes it available to the client
+app.get('/js/config.js', (req, res) => {
+  // Set the content type to JavaScript
+  res.setHeader('Content-Type', 'application/javascript');
+  
+  // Set cache control headers to prevent caching of this file
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  // Generate a random nonce for added security (prevents script injection)
+  const nonce = crypto.randomBytes(16).toString('base64');
+  
+  // Create JavaScript that sets the WEBSITE_FORM_SECRET
+  const js = `
+    // Configuration for Agent Smith website
+    // Generated at: ${new Date().toISOString()}
+    window.AGENT_SMITH_CONFIG = {
+      websiteFormSecret: "${process.env.WEBSITE_FORM_SECRET || ''}",
+      csrfToken: "${nonce}" // Using the nonce as a CSRF token
+    };
+  `;
+  
+  res.send(js);
+});
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -90,13 +223,13 @@ app.post('/api/process-signup', validateApiKey, async (req, res) => {
       return res.status(400).json({ error: 'Email and name are required' });
     }
     
-    // Extract API key from headers for multi-tenant support
-    const apiKey = req.headers['x-api-key'];
-    console.log(`[Server] Processing signup with API key: ${apiKey}`);
+    // Use the company info from the middleware
+    const company = req.company;
+    console.log(`[Server] Processing signup for company: ${company.name}`);
     
     // Start the signup processing and get job info
-    const jobInfo = await emailProcessor.processSignup(email, name, apiKey);
-    console.log(`[Server] Job created with ID: ${jobInfo.jobId}, API key used: ${apiKey}`);
+    const jobInfo = await emailProcessor.processSignup(email, name, company.keyId, company.id);
+    console.log(`[Server] Job created with ID: ${jobInfo.jobId}, Company ID: ${company.id}, Key ID: ${company.keyId}`);
     
     // Return job information to the client
     return res.status(202).json({ 

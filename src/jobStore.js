@@ -6,14 +6,19 @@ const supabase = require('./supabaseClient');
 
 /**
  * Create a new job in the database
- * @param {string} email - User's email address
- * @param {string} name - User's name
- * @param {string} domain - Company domain
- * @param {string} apiKey - Optional company API key for multi-tenant support
+ * @param {Object} jobData - Job information
+ * @param {string} jobData.email - User's email address
+ * @param {string} jobData.name - User's name
+ * @param {string} jobData.domain - Company domain
+ * @param {string} [jobData.apiKeyId] - API key ID for the enhanced security system
+ * @param {string} [jobData.companyId] - Company ID that submitted this request
+ * @param {boolean} [jobData.fromWebsite] - Whether this submission came from the website form
  * @returns {Object} Created job data
  */
-async function createJob(email, name, domain, apiKey = null) {
+async function createJob(jobData) {
   try {
+    const { email, name, domain, apiKeyId, companyId, fromWebsite } = jobData;
+    
     console.log(`Creating job for ${name} (${email}) from domain ${domain}`);
     
     const { data, error } = await supabase
@@ -22,7 +27,9 @@ async function createJob(email, name, domain, apiKey = null) {
         email,
         name,
         domain,
-        api_key: apiKey,
+        api_key_id: apiKeyId,
+        company_id: companyId,
+        from_website: fromWebsite,
         status: 'pending'
       })
       .select()

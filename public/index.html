@@ -6,12 +6,15 @@
     <title>Agent Smith | AI-Powered Email Personalization</title>
     <link rel="icon" href="images/favicon.png" type="image/png">
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/form-handlers.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://kit.fontawesome.com/3b49ef8fb1.js" crossorigin="anonymous"></script>
     <!-- Material Icons for better icon coverage -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <!-- Load dynamic configuration -->
+    <script src="/js/config.js"></script>
 </head>
 <body>
     <header>
@@ -28,15 +31,16 @@
                 <div class="hero-content">
                     <h1>The AI Welcome Email <span class="gradient-text">Specialist</span> for SaaS Businesses</h1>
                     <p class="hero-subtitle">Transform business email signups into engaged customers with personalized welcome emails that feel hand-crafted.</p>
-                    <form id="hero-form" class="hero-form">
+                    <form id="signup-form" class="hero-form">
                         <div class="form-row">
-                            <input type="text" placeholder="First Name" required>
-                            <input type="text" placeholder="Last Name" required>
+                            <input type="text" id="name" name="name" placeholder="Your Name" required>
                         </div>
                         <div class="form-row">
-                            <input type="email" placeholder="Business Email Address" required>
+                            <input type="email" id="email" name="email" placeholder="Business Email Address" required>
                             <button type="submit" class="button primary">TRY IT FREE</button>
                         </div>
+                        <div id="form-status" class="form-status"></div>
+                        <div id="job-status"></div>
                         <p class="form-note">See the magic for yourself – submit your business email and watch Agent Smith craft a personalized welcome message just for you.</p>
                     </form>
                 </div>
@@ -552,20 +556,7 @@
         </div>
     </footer>
 
-    <script>
-        document.getElementById('registration-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const company = document.getElementById('company').value;
-            
-            // Here you would normally send this data to your backend
-            console.log('Form submitted:', { name, email, company });
-            
-            // For demo purposes, show a success message
-            alert('Thanks for registering! We\'ll be in touch shortly.');
-            this.reset();
-        });
-    </script>
+    <!-- Load our form handlers script -->    
+    <script src="js/form-handlers.js"></script>
 </body>
 </html>

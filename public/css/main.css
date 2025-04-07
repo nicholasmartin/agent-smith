@@ -4,5 +4,6 @@
 @import 'base.css';
 @import 'layout.css';
 @import 'components.css';
+@import 'form-handlers.css';
 
 /* Any additional custom styles can be added here */

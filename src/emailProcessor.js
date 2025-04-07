@@ -8,12 +8,14 @@ const jobStore = require('./jobStore');
  * Process a new signup by checking the domain and starting the scraping job
  * @param {string} email - User's email address
  * @param {string} name - User's name
- * @param {string} apiKey - Optional company API key for multi-tenant support
+ * @param {string} apiKeyId - API key ID for the enhanced security system
+ * @param {string} companyId - Company ID that submitted this request
+ * @param {boolean} [fromWebsite=false] - Whether this submission came from the website form
  * @returns {Object} Job information
  */
-async function processSignup(email, name, apiKey = null) {
+async function processSignup(email, name, apiKeyId, companyId, fromWebsite = false) {
   try {
-    console.log(`[EmailProcessor] Processing signup for ${email} with API key: ${apiKey}`);
+    console.log(`[EmailProcessor] Processing signup for ${email} from ${fromWebsite ? 'website form' : 'API'}`);
     
     // Step 1: Check if it's a business domain
     const { isDomainFree, domain } = domainChecker.checkDomain(email);
@@ -24,10 +26,20 @@ async function processSignup(email, name, apiKey = null) {
       return { status: 'skipped', reason: 'free email provider' };
     }
     
-    // Step 2: Create a job record in the database
-    console.log(`Creating job record for ${name} (${email}) from domain ${domain} with API key: ${apiKey}`);
-    const job = await jobStore.createJob(email, name, domain, apiKey);
-    console.log(`[EmailProcessor] Job created with ID: ${job.id}, API key stored: ${job.api_key}`);
+    // Step 2: Create a job record in the database with enhanced security metadata
+    console.log(`Creating job record for ${name} (${email}) from domain ${domain}`);
+    
+    // Create job with new security parameters
+    const job = await jobStore.createJob({
+      email, 
+      name, 
+      domain, 
+      apiKeyId,
+      companyId, 
+      fromWebsite
+    });
+    
+    console.log(`[EmailProcessor] Job created with ID: ${job.id}`);
     
     // Step 3: Start the website scraping job
     console.log(`Starting scrape job for domain: ${domain}`);
