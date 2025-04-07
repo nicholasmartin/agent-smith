@@ -160,6 +160,38 @@ app.post('/api/website-signup', formLimiter, validateWebsiteSecret, async (req, 
   }
 });
 
+// Job status endpoint with website form security
+app.get('/api/job-status/:jobId', validateWebsiteSecret, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    if (!jobId) {
+      return res.status(400).json({ error: 'Job ID is required' });
+    }
+    
+    // Get job status from database
+    const job = await jobStore.getJobById(jobId);
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    // Return job status information
+    return res.status(200).json({
+      jobId: job.id,
+      status: job.status,
+      email: job.email,
+      domain: job.domain,
+      createdAt: job.created_at,
+      updatedAt: job.updated_at,
+      completedAt: job.completed_at
+    });
+  } catch (error) {
+    console.error('Job status check error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Serve the WEBSITE_FORM_SECRET as a JavaScript variable
 // This keeps the secret on the server but makes it available to the client
 app.get('/js/config.js', (req, res) => {
