@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Smith | AI-Powered Email Personalization</title>
+    <link rel="icon" href="images/favicon.png" type="image/png">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/form-handlers.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/3b49ef8fb1.js" crossorigin="anonymous"></script>
+    <!-- Material Icons for better icon coverage -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <!-- Load dynamic configuration -->
+    <script src="/js/config.js"></script>
+    <!-- Supabase client for authentication -->
+    <meta name="supabase-url" content="https://jnpdszffuosiirapfvwp.supabase.co">
+    <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODE2MjM0NDIsImV4cCI6MTk5NzE5OTQ0Mn0.S23qyYgN3-Uuq6Iy_P-Qw0OUlpKh_WXnIl6c-1-43Vc">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header>
+        <div class="header-container container">
+            <div class="logo">
+                <span class="logo-text">Agent<span class="highlight">Smith</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="active">Home</a>
+                <a href="api.html">API</a>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-grid">
+                <div class="hero-content">
+                    <h1>The AI Welcome Email <span class="gradient-text">Specialist</span> for SaaS Businesses</h1>
+                    <p class="hero-subtitle">Transform business email signups into engaged customers with personalized welcome emails that feel hand-crafted.</p>
+                    <form id="signup-form" class="hero-form">
+                        <div class="form-row">
+                            <input type="text" id="name" name="name" placeholder="Your Name" required>
+                        </div>
+                        <div class="form-row">
+                            <input type="email" id="email" name="email" placeholder="Business Email Address" required>
+                            <button type="submit" class="button primary">TRY IT FREE</button>
+                        </div>
+                        <div id="form-status" class="form-status"></div>
+                        <div id="job-status"></div>
+                        <p class="form-note">See the magic for yourself – submit your business email and watch Agent Smith craft a personalized welcome message just for you.</p>
+                    </form>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-image">
+                        <img src="images/agent-smith.png" alt="Agent Smith Character" class="agent-smith-image">
+                    </div>
+                    <div class="floating-card card-1">
+                        <i class="fas fa-robot"></i>
+                        <span>AI-Powered Research</span>
+                    </div>
+                    <div class="floating-card card-2">
+                        <i class="fas fa-envelope-open-text"></i>
+                        <span>Personalized Emails</span>
+                    </div>
+                    <div class="floating-card card-3">
+                        <i class="fas fa-cogs"></i>
+                        <span>Automated Workflow</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="micro-agent">
+        <div class="container">
+            <div class="section-header">
+                <h2>THE MICRO-AGENT THAT FITS YOUR WORKFLOW</h2>
+                <p>Agent Smith isn't another bloated platform you need to learn.<br>It's a specialized AI agent with one mission: <strong>Turn email addresses into personalized welcome emails.</strong></p>
+            </div>
+            <div class="features-grid three-columns">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons-round">integration_instructions</span>
+                    </div>
+                    <p><strong>Seamlessly plugs into your existing systems</strong></p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons-round">settings_suggest</span>
+                    </div>
+                    <p><strong>No disruption to your current processes</strong></p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons-round">rocket_launch</span>
+                    </div>
+                    <p><strong>Deploy in minutes, not days</strong></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="dilemma">
+        <div class="container">
+            <div class="section-header">
+                <h2>THE WELCOME EMAIL DILEMMA</h2>
+                <p>See how Agent Smith transforms common welcome email challenges into opportunities</p>
+            </div>
+            <div class="dilemma-grid">
+                <div class="dilemma-column problem-column">
+                    <div class="dilemma-header">
+                        <span class="material-icons-round">error_outline</span>
+                        <h3>Common Challenges</h3>
+                    </div>
+                    <div class="dilemma-items">
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">close</span>
+                            </div>
+                            <p>Generic welcome emails get ignored</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">close</span>
+                            </div>
+                            <p>Manual research takes too much time</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">close</span>
+                            </div>
+                            <p>New signups drift away without engagement</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">close</span>
+                            </div>
+                            <p>Too early to invest resources in manual follow-up</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="dilemma-divider">
+                    <div class="divider-line"></div>
+                    <div class="divider-icon">
+                        <span class="material-icons-round">arrow_forward</span>
+                    </div>
+                    <div class="divider-line"></div>
+                </div>
+                <div class="dilemma-column solution-column">
+                    <div class="dilemma-header">
+                        <span class="material-icons-round">check_circle_outline</span>
+                        <h3>Agent Smith Solutions</h3>
+                    </div>
+                    <div class="dilemma-items">
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <p>Messages that feel hand-crafted and personal</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <p>Instant website analysis and personalization</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <p>Capture attention when interest is highest</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <p>Automated personalization at scale</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2>HOW AGENT SMITH WORKS</h2>
+            </div>
+            <div class="process-grid three-steps">
+                <div class="process-item">
+                    <div class="process-number">1</div>
+                    <div class="process-content">
+                        <h3>Collect & Investigate</h3>
+                        <p>Receives an email address from your signup form or CRM and automatically researches their business website</p>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-number">2</div>
+                    <div class="process-content">
+                        <h3>Analyze & Craft</h3>
+                        <p>Uses AI to understand their business needs and creates a personalized welcome email that speaks directly to their challenges</p>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-number">3</div>
+                    <div class="process-content">
+                        <h3>Deliver & Convert</h3>
+                        <p>Provides ready-to-send email copy through your existing platform, turning cold signups into engaged prospects</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="universal-integration">
+        <div class="container">
+            <div class="section-header">
+                <h2>UNIVERSAL INTEGRATION</h2>
+            </div>
+            <div class="integration-icons">
+                <div class="icon-row">
+                    <div class="integration-icon"><span class="material-icons-round">mark_email_read</span><span class="icon-label">Email</span></div>
+                    <div class="integration-icon"><span class="material-icons-round">business</span><span class="icon-label">CRM</span></div>
+                    <div class="integration-icon"><span class="material-icons-round">cloud</span><span class="icon-label">SaaS</span></div>
+                    <div class="integration-icon"><span class="material-icons-round">language</span><span class="icon-label">Web</span></div>
+                    <div class="integration-icon"><span class="material-icons-round">shopping_cart</span><span class="icon-label">E-commerce</span></div>
+                </div>
+            </div>
+            <div class="text-center">
+                <h3>Agent Smith plays nice with everyone:</h3>
+                <ul class="integration-list">
+                    <li>Any CRM system</li>
+                    <li>Any email marketing platform</li>
+                    <li>Any content management system</li>
+                    <li>Any signup form provider</li>
+                    <li>Any customer data platform</li>
+                </ul>
+                <p class="emphasis">All Agent Smith needs is an email address. That's it.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="customization">
+        <div class="container">
+            <div class="section-header">
+                <h2>FULLY CUSTOMIZABLE RESEARCH & MESSAGING</h2>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons-round">manage_search</span>
+                    </div>
+                    <h3>Research Scope Control</h3>
+                    <p>Define exactly what to analyze (homepage only, specific pages, team info, product details)</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons-round">center_focus_strong</span>
+                    </div>
+                    <h3>Content Focus</h3>
+                    <p>Direct what information matters most to your business</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons-round">format_color_text</span>
+                    </div>
+                    <h3>Message Style</h3>
+                    <p>Customize tone, style, and length of generated emails</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons-round">description</span>
+                    </div>
+                    <h3>Template System</h3>
+                    <p>Create company-specific templates with variable substitution</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons-round">groups</span>
+                    </div>
+                    <h3>Multi-tenant Support</h3>
+                    <p>Different teams can use their own custom configurations</p>
+                </div>
+            </div>
+            <p class="emphasis text-center">Your AI agent, your rules.</p>
+        </div>
+    </section>
+
+    <section class="testimonial">
+        <div class="container">
+            <div class="testimonial-card">
+                <div class="quote-mark"><i class="fas fa-quote-left"></i></div>
+                <p class="testimonial-text">Instead of sending the same generic welcome email to every lead, Agent Smith helps us create personalized messages that reference their specific business challenges. Our response rates have tripled since implementing it.</p>
+                <div class="testimonial-author">
+                    <img src="https://randomuser.me/api/portraits/men/42.jpg" alt="Testimonial Author" class="author-image">
+                    <div class="author-info">
+                        <h4>Jordan</h4>
+                        <p>B2B SaaS Founder</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="difference">
+        <div class="container">
+            <div class="section-header">
+                <h2>EXPERIENCE THE AGENT SMITH DIFFERENCE</h2>
+                <p>See how Agent Smith transforms your customer engagement experience</p>
+            </div>
+            <div class="dilemma-grid">
+                <div class="dilemma-column problem-column">
+                    <div class="dilemma-header">
+                        <span class="material-icons-round">sentiment_dissatisfied</span>
+                        <h3>Without Agent Smith</h3>
+                    </div>
+                    <div class="dilemma-items">
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">close</span>
+                            </div>
+                            <p>Generic "Thanks for subscribing!" emails</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">close</span>
+                            </div>
+                            <p>Low open rates and engagement</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">close</span>
+                            </div>
+                            <p>Hours spent researching prospects</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">close</span>
+                            </div>
+                            <p>Missed opportunities for connection</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="dilemma-divider">
+                    <div class="divider-line"></div>
+                    <div class="divider-icon">
+                        <span class="material-icons-round">arrow_forward</span>
+                    </div>
+                    <div class="divider-line"></div>
+                </div>
+                <div class="dilemma-column solution-column">
+                    <div class="dilemma-header">
+                        <span class="material-icons-round">sentiment_very_satisfied</span>
+                        <h3>With Agent Smith</h3>
+                    </div>
+                    <div class="dilemma-items">
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <p>"How did they know exactly what I need?" reactions</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <p>3X higher response rates</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <p>Seconds instead of hours for research</p>
+                        </div>
+                        <div class="dilemma-item">
+                            <div class="dilemma-icon">
+                                <span class="material-icons-round">check</span>
+                            </div>
+                            <p>Immediate, meaningful relationships</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="try-it">
+        <div class="container">
+            <div class="section-header">
+                <h2>SEE IT IN ACTION</h2>
+                <p>Enter your business email below and we'll show you exactly what Agent Smith can do.</p>
+            </div>
+            <form id="try-it-form" class="try-it-form">
+                <div class="form-row">
+                    <input type="text" placeholder="First Name" required>
+                    <input type="text" placeholder="Last Name" required>
+                    <input type="email" placeholder="Your Business Email" required>
+                    <button type="submit" class="button primary">TRY IT FREE</button>
+                </div>
+                <p class="form-note">We'll instantly generate a personalized welcome email based on your business website. No obligation.</p>
+            </form>
+        </div>
+    </section>
+
+    <section class="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2>SIMPLE PRICING THAT MAKES SENSE</h2>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card free">
+                    <div class="pricing-header">
+                        <h3>FREE TRIAL</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">0</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> 50 email personalizations</li>
+                        <li><i class="fas fa-check"></i> Full functionality</li>
+                        <li><i class="fas fa-check"></i> No credit card required</li>
+                        <li><i class="fas fa-check"></i> No more generic emails</li>
+                        <li><i class="fas fa-check"></i> Impress new signups</li>
+                    </ul>
+                    <a href="#signup" class="button secondary full-width">TRY IT FREE</a>
+                </div>
+                
+                <div class="pricing-card premium">
+                    <div class="pricing-header">
+                        <h3>ONE-TIME PAYMENT</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">29</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Unlimited email personalizations</li>
+                        <li><i class="fas fa-check"></i> Lifetime access</li>
+                        <li><i class="fas fa-check"></i> 30-day money-back guarantee</li>
+                        <li><i class="fas fa-check"></i> BYOK (Bring Your Own Keys) for OpenAI</li>
+                        <li><i class="fas fa-check"></i> Full control over AI token costs</li>
+                    </ul>
+                    <a href="#signup" class="button primary full-width">BUY NOW</a>
+                </div>
+            </div>
+            <br>
+            <p class="pricing-note text-center">No subscriptions. No recurring fees. No surprise charges.</p>
+        </div>
+    </section>
+    
+    <section class="ai-costs">
+        <div class="container">
+            <div class="section-header">
+                <h2>CONTROL YOUR AI COSTS</h2>
+            </div>
+            <div class="ai-costs-content">
+                <div class="ai-costs-icon">
+                    <span class="material-icons-round">vpn_key</span>
+                </div>
+                <div class="ai-costs-text">
+                    <h3>Bring your own OpenAI API keys</h3>
+                    <ul>
+                        <li>Keep full control of your token usage</li>
+                        <li>Use your existing API account</li>
+                        <li>Scale without unexpected costs</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq">
+        <div class="container">
+            <div class="section-header">
+                <h2>FREQUENTLY ASKED QUESTIONS</h2>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h3>How long does it take to set up?</h3>
+                    <p>Less than 5 minutes. Seriously. It's a single integration point.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Will this work with [insert your tech stack]?</h3>
+                    <p>Yes. Agent Smith only needs an email address as input and delivers email copy as output. It works with any system.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>What if I change email platforms or CRMs?</h3>
+                    <p>No problem. Agent Smith doesn't care what systems you use. Email in, personalized message out.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Do I need technical skills to implement this?</h3>
+                    <p>If you can copy and paste, you have all the technical skills required.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>How does Agent Smith learn about my leads?</h3>
+                    <p>It uses the domain from their business email to find and analyze their website, social profiles, and other public information.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Can I customize what Agent Smith looks for when researching?</h3>
+                    <p>Absolutely. You can define the research scope (homepage only or all pages), specific sections to focus on (about us, team, products), and what information matters most to your business.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Can I control how the emails are written?</h3>
+                    <p>Yes. You can customize the tone, style, and length of generated emails. You can also create company-specific templates with variable substitution to maintain brand consistency.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Will I have to pay more as I grow?</h3>
+                    <p>Never. One payment covers unlimited usage. Your only potential cost is OpenAI API tokens, which you control directly.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <span class="logo-text">Agent<span class="highlight">Smith</span></span>
+                    </div>
+                    <p>AI-powered email personalization that creates meaningful connections with your subscribers.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-links-column">
+                        <h4>Product</h4>
+                        <ul>
+                            <li><a href="#">Features</a></li>
+                            <li><a href="#">Pricing</a></li>
+                            <li><a href="#">API</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="#">About</a></li>
+                            <li><a href="#">Blog</a></li>
+                            <li><a href="#">Careers</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Legal</h4>
+                        <ul>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                            <li><a href="#">Cookie Policy</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Agent Smith. All rights reserved.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Load our form handlers and authentication scripts -->    
+    <script src="js/form-handlers.js"></script>
+    <script src="js/supabase-auth.js"></script>
+</body>
+</html>

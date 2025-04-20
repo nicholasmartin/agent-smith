@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Smith - Login</title>
+    <meta name="supabase-url" content="https://jnpdszffuosiirapfvwp.supabase.co">
+    <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODE2MjM0NDIsImV4cCI6MTk5NzE5OTQ0Mn0.S23qyYgN3-Uuq6Iy_P-Qw0OUlpKh_WXnIl6c-1-43Vc">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    
+    <!-- Sentry Error Tracking - Load before other scripts -->
+    <script src="js/sentry-client.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .auth-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .auth-tab.active {
+            border-bottom: 2px solid #4CAF50;
+            font-weight: bold;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container container">
+            <div class="logo">
+                <span class="logo-text">Agent<span class="highlight">Smith</span></span>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="login.html" class="active">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <main>
+        <div class="auth-container">
+            <h2>Welcome to Agent Smith</h2>
+            <p>Sign in to access your personalized emails and dashboard.</p>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Sign In</div>
+                <div class="auth-tab" data-tab="magic-link">Magic Link</div>
+            </div>
+            
+            <div id="login-form" class="auth-form active">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="Your email address">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Your password">
+                </div>
+                
+                <button type="button" id="login-btn">Sign In</button>
+                
+                <div id="login-status" class="status"></div>
+            </div>
+            
+            <div id="magic-link-form" class="auth-form">
+                <div class="form-group">
+                    <label for="magic-email">Email</label>
+                    <input type="email" id="magic-email" placeholder="Your email address">
+                </div>
+                
+                <button type="button" id="send-magic-link">Send Magic Link</button>
+                
+                <div id="magic-link-status" class="status"></div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Agent Smith - Email Personalization Service</p>
+        </div>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('login-form');
+            const magicLinkForm = document.getElementById('magic-link-form');
+            const loginBtn = document.getElementById('login-btn');
+            const sendMagicLink = document.getElementById('send-magic-link');
+            const loginStatus = document.getElementById('login-status');
+            const magicLinkStatus = document.getElementById('magic-link-status');
+            
+            // Tab switching
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and forms
+                    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding form
+                    tab.classList.add('active');
+                    const formId = tab.getAttribute('data-tab') + '-form';
+                    document.getElementById(formId).classList.add('active');
+                    
+                    // Clear status messages
+                    loginStatus.textContent = '';
+                    loginStatus.className = 'status';
+                    magicLinkStatus.textContent = '';
+                    magicLinkStatus.className = 'status';
+                });
+            });
+            
+            // Initialize Supabase client
+            const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
+            const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+            
+            // Check if user is already signed in
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    // Redirect to dashboard if already authenticated
+                    window.location.href = '/dashboard.html';
+                }
+            });
+            
+            // Handle login form submission
+            loginBtn.addEventListener('click', async () => {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                if (!email || !password) {
+                    loginStatus.textContent = 'Please enter both email and password';
+                    loginStatus.className = 'status error';
+                    return;
+                }
+                
+                try {
+                    loginStatus.textContent = 'Signing in...';
+                    loginStatus.className = 'status info';
+                    
+                    const { error } = await supabase.auth.signInWithPassword({
+                        email,
+                        password
+                    });
+                    
+                    if (error) throw error;
+                    
+                    // Redirect to dashboard on successful login
+                    window.location.href = '/dashboard.html';
+                } catch (error) {
+                    console.error('Error signing in:', error);
+                    loginStatus.textContent = error.message || 'Error signing in';
+                    loginStatus.className = 'status error';
+                }
+            });
+            
+            // Handle magic link form submission
+            sendMagicLink.addEventListener('click', async () => {
+                const email = document.getElementById('magic-email').value;
+                
+                if (!email) {
+                    magicLinkStatus.textContent = 'Please enter your email address';
+                    magicLinkStatus.className = 'status error';
+                    return;
+                }
+                
+                try {
+                    magicLinkStatus.textContent = 'Sending magic link...';
+                    magicLinkStatus.className = 'status info';
+                    
+                    const { error } = await supabase.auth.signInWithOtp({
+                        email,
+                        options: {
+                            emailRedirectTo: window.location.origin + '/dashboard.html'
+                        }
+                    });
+                    
+                    if (error) throw error;
+                    
+                    magicLinkStatus.textContent = 'Magic link sent! Check your email.';
+                    magicLinkStatus.className = 'status success';
+                } catch (error) {
+                    console.error('Error sending magic link:', error);
+                    magicLinkStatus.textContent = error.message || 'Error sending magic link';
+                    magicLinkStatus.className = 'status error';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

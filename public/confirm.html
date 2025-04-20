@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirming Your Account - Agent Smith</title>
+    <meta name="supabase-url" content="https://jnpdszffuosiirapfvwp.supabase.co">
+    <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODE2MjM0NDIsImV4cCI6MTk5NzE5OTQ0Mn0.S23qyYgN3-Uuq6Iy_P-Qw0OUlpKh_WXnIl6c-1-43Vc">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        .status.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .status.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .status.info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #4CAF50;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Confirming Your Account</h1>
+        <div id="loading">
+            <div class="spinner"></div>
+            <p>Please wait while we confirm your account...</p>
+        </div>
+        <div id="message" class="status info hidden"></div>
+        <div id="redirect-message" class="hidden">
+            <p>You'll be redirected to your dashboard in <span id="countdown">5</span> seconds...</p>
+            <p>Or <a href="/dashboard" id="manual-redirect">click here</a> to go there now.</p>
+        </div>
+    </div>
+
+    <script>
+        // Global debug logger function that logs to both console and page
+        function debugLog(message, data) {
+            // Create a container for logs if it doesn't exist
+            let logContainer = document.getElementById('debug-logs');
+            if (!logContainer) {
+                logContainer = document.createElement('div');
+                logContainer.id = 'debug-logs';
+                logContainer.style.margin = '20px 0';
+                logContainer.style.padding = '10px';
+                logContainer.style.border = '1px solid #ddd';
+                logContainer.style.background = '#f9f9f9';
+                logContainer.style.maxHeight = '300px';
+                logContainer.style.overflow = 'auto';
+                logContainer.style.fontFamily = 'monospace';
+                logContainer.style.fontSize = '12px';
+                
+                const heading = document.createElement('h3');
+                heading.textContent = 'Debug Logs';
+                logContainer.appendChild(heading);
+                
+                // Add toggle button
+                const toggleButton = document.createElement('button');
+                toggleButton.textContent = 'Toggle Debug Logs';
+                toggleButton.style.marginBottom = '10px';
+                toggleButton.style.padding = '5px';
+                toggleButton.onclick = function() {
+                    const content = document.getElementById('debug-logs-content');
+                    if (content) {
+                        content.style.display = content.style.display === 'none' ? 'block' : 'none';
+                    }
+                };
+                
+                logContainer.appendChild(toggleButton);
+                
+                // Add content container
+                const content = document.createElement('div');
+                content.id = 'debug-logs-content';
+                logContainer.appendChild(content);
+                
+                document.querySelector('.container').appendChild(logContainer);
+            }
+            
+            // Log to console
+            if (data) {
+                console.log(message, data);
+            } else {
+                console.log(message);
+            }
+            
+            // Log to page
+            const entry = document.createElement('div');
+            entry.style.borderBottom = '1px solid #eee';
+            entry.style.padding = '4px 0';
+            
+            const timestamp = new Date().toISOString().substring(11, 23); // HH:MM:SS.mmm
+            const msgText = document.createElement('span');
+            msgText.innerHTML = `<strong>${timestamp}</strong>: ${message}`;
+            entry.appendChild(msgText);
+            
+            if (data) {
+                const dataText = document.createElement('pre');
+                dataText.style.margin = '4px 0 4px 20px';
+                dataText.style.fontSize = '11px';
+                dataText.textContent = typeof data === 'object' ? JSON.stringify(data, null, 2) : data.toString();
+                entry.appendChild(dataText);
+            }
+            
+            document.getElementById('debug-logs-content').appendChild(entry);
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            debugLog('Page loaded, initializing authentication process...');
+            const loadingElement = document.getElementById('loading');
+            const messageElement = document.getElementById('message');
+            const redirectElement = document.getElementById('redirect-message');
+            const countdownElement = document.getElementById('countdown');
+            const manualRedirectLink = document.getElementById('manual-redirect');
+
+            // Initialize Supabase client
+            const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
+            const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+            // Function to show message
+            const showMessage = (text, type = 'info') => {
+                messageElement.textContent = text;
+                messageElement.className = `status ${type}`;
+                messageElement.classList.remove('hidden');
+                loadingElement.classList.add('hidden');
+            };
+
+            // Function to redirect to dashboard
+            const redirectToDashboard = () => {
+                window.location.href = '/dashboard';
+            };
+
+            // Function to start countdown
+            const startCountdown = (seconds = 5) => {
+                redirectElement.classList.remove('hidden');
+                countdownElement.textContent = seconds;
+
+                const interval = setInterval(() => {
+                    seconds--;
+                    countdownElement.textContent = seconds;
+                    
+                    if (seconds <= 0) {
+                        clearInterval(interval);
+                        redirectToDashboard();
+                    }
+                }, 1000);
+
+                // Manual redirect link
+                manualRedirectLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    clearInterval(interval);
+                    redirectToDashboard();
+                });
+            };
+
+            try {
+                // Parse URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const hash = window.location.hash.substring(1);
+                const hashParams = new URLSearchParams(hash);
+                
+                // Get the raw URL for debugging
+                const fullUrl = window.location.href;
+                debugLog('Full URL:', fullUrl);
+                
+                // Log parameter information for debugging
+                const urlParamsObj = Object.fromEntries(urlParams.entries());
+                const hashParamsObj = Object.fromEntries(hashParams.entries());
+                debugLog('URL Parameters:', urlParamsObj);
+                debugLog('Hash Parameters:', hashParamsObj);
+                
+                // NEW TWO-STEP VERIFICATION: First check for our custom auth parameter
+                // This implements the second step of our protection against email scanners
+                const authParam = urlParams.get('auth');
+                let token = null;
+                let tokenHash = null;
+                
+                if (authParam) {
+                    debugLog('Found protected auth parameter, processing...');
+                    try {
+                        // Parse our custom auth parameter format
+                        // Format: t:{token}--th:{token_hash} or just one of them
+                        if (authParam.includes('--')) {
+                            // Both token and token_hash
+                            const [tokenPart, hashPart] = authParam.split('--');
+                            
+                            if (tokenPart.startsWith('t:')) {
+                                token = decodeURIComponent(tokenPart.substring(2));
+                                debugLog('Extracted token from auth param');
+                            }
+                            
+                            if (hashPart.startsWith('th:')) {
+                                tokenHash = decodeURIComponent(hashPart.substring(3));
+                                debugLog('Extracted token_hash from auth param');
+                            }
+                        } else if (authParam.startsWith('t:')) {
+                            // Just token
+                            token = decodeURIComponent(authParam.substring(2));
+                            debugLog('Extracted token from auth param');
+                        } else if (authParam.startsWith('th:')) {
+                            // Just token_hash
+                            tokenHash = decodeURIComponent(authParam.substring(3));
+                            debugLog('Extracted token_hash from auth param');
+                        }
+                    } catch (e) {
+                        debugLog('Error parsing auth parameter:', e);
+                    }
+                } else {
+                    // Fall back to standard parameters if no auth param is found
+                    token = urlParams.get('token') || hashParams.get('access_token');
+                    tokenHash = urlParams.get('token_hash');
+                }
+                
+                // Get other standard parameters
+                const type = urlParams.get('type') || 'email';
+                const error = urlParams.get('error') || hashParams.get('error');
+                const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+                
+                debugLog('Extracted auth parameters:', {
+                    hasToken: !!token,
+                    hasTokenHash: !!tokenHash,
+                    type,
+                    error,
+                    errorDescription
+                });
+                
+                // Check if there's an error in the URL
+                if (error) {
+                    showMessage(`Authentication error: ${errorDescription || error}`, 'error');
+                    return;
+                }
+
+                // Handle invitation flow
+                if (token || tokenHash) {
+                    debugLog(`Attempting to confirm with ${token ? 'token' : 'token_hash'}`);
+                    
+                    // Try multiple approaches to verification
+                    
+                    // APPROACH 1: Try verification with explicit parameters
+                    debugLog('APPROACH 1: Trying verification with explicit parameters');
+                    let verifyParams = {};
+                    
+                    // For invites, we must use the correct type
+                    if (type === 'invite') {
+                        if (token && tokenHash) {
+                            // Both token and token_hash
+                            verifyParams = {
+                                token,
+                                token_hash: tokenHash,
+                                type: 'invite'
+                            };
+                            debugLog('Using both token and token_hash with type=invite');
+                        } else if (token) {
+                            // Just token
+                            verifyParams = {
+                                token,
+                                type: 'invite'
+                            };
+                            debugLog('Using token with type=invite');
+                        } else if (tokenHash) {
+                            // Just token_hash
+                            verifyParams = {
+                                token_hash: tokenHash,
+                                type: 'invite'
+                            };
+                            debugLog('Using token_hash with type=invite');
+                        }
+                    } else {
+                        // For other auth types
+                        if (token) {
+                            verifyParams = {
+                                token,
+                                type: type || 'email'
+                            };
+                            debugLog(`Using token with type=${type || 'email'}`);
+                        } else if (tokenHash) {
+                            verifyParams = {
+                                token_hash: tokenHash,
+                                type: type || 'email'
+                            };
+                            debugLog(`Using token_hash with type=${type || 'email'}`);
+                        }
+                    }
+                    
+                    // Verify OTP/Magic link
+                    if (Object.keys(verifyParams).length > 0) {
+                        debugLog('Verifying with params:', verifyParams);
+                        try {
+                            const result = await supabase.auth.verifyOtp(verifyParams);
+                            debugLog('Verification result:', result);
+                            
+                            if (result.error) {
+                                // If Approach 1 fails, try Approach 2
+                                debugLog('APPROACH 1 failed, trying APPROACH 2: getSession');
+                                
+                                // APPROACH 2: Let Supabase handle it automatically
+                                const sessionResult = await supabase.auth.getSession();
+                                debugLog('Session check result:', sessionResult);
+                                
+                                if (sessionResult.error) {
+                                    throw sessionResult.error;
+                                } else if (sessionResult.data?.session) {
+                                    debugLog('Successfully established session via automatic handling');
+                                    showMessage('Your account has been verified successfully!', 'success');
+                                    startCountdown();
+                                    return;
+                                } else {
+                                    throw result.error; // Revert to the original error
+                                }
+                            } else {
+                                debugLog('Verification successful!');
+                            }
+                        
+                        } catch (verifyError) {
+                            debugLog('Verification error:', verifyError);
+                            
+                            // APPROACH 3: Try with different type combinations
+                            debugLog('APPROACH 3: Trying different type combinations');
+                            const possibleTypes = ['invite', 'signup', 'email', 'recovery'];
+                            let succeeded = false;
+                            
+                            for (const tryType of possibleTypes) {
+                                if (succeeded) break;
+                                
+                                try {
+                                    debugLog(`Trying verification with type=${tryType}`);
+                                    const altParams = {...verifyParams, type: tryType};
+                                    const altResult = await supabase.auth.verifyOtp(altParams);
+                                    debugLog(`Result with type=${tryType}:`, altResult);
+                                    
+                                    if (!altResult.error) {
+                                        debugLog(`Success with type=${tryType}!`);
+                                        showMessage('Your account has been confirmed successfully!', 'success');
+                                        startCountdown();
+                                        succeeded = true;
+                                        break;
+                                    }
+                                } catch (e) {
+                                    debugLog(`Failed with type=${tryType}:`, e);
+                                }
+                            }
+                            
+                            if (!succeeded) {
+                                // If all approaches fail, show error
+                                showMessage(`Verification failed: ${verifyError.message}`, 'error');
+                                return;
+                            }
+                        }
+                    } else {
+                        // Check if we're already signed in
+                        debugLog('No verification params found, checking if already signed in');
+                        try {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            debugLog('Session check result:', { hasSession: !!session });
+                            
+                            if (session) {
+                                showMessage('You\'re already signed in!', 'success');
+                                startCountdown(2);
+                            } else {
+                                showMessage('Unable to confirm your account. Invalid or missing verification parameters.', 'error');
+                            }
+                        } catch (e) {
+                            debugLog('Error checking session:', e);
+                            showMessage(`Error checking session: ${e.message}`, 'error');
+                        }
+                    }
+                } else {
+                    // No verification params - check if already signed in
+                    debugLog('No token or token_hash parameters found');
+                    try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        debugLog('Session check result:', { hasSession: !!session });
+                        
+                        if (session) {
+                            showMessage('You\'re already signed in!', 'success');
+                            startCountdown(2);
+                        } else {
+                            showMessage('No verification parameters found. Please use the link from your email.', 'error');
+                        }
+                    } catch (e) {
+                        debugLog('Error checking session:', e);
+                        showMessage(`Error checking session: ${e.message}`, 'error');
+                    }
+                }
+            } catch (error) {
+                debugLog('Unexpected error during verification process:', error);
+                showMessage(`An unexpected error occurred: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

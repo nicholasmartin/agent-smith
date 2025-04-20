@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Smith | API Documentation</title>
+    <link rel="icon" href="images/favicon.png" type="image/png">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/3b49ef8fb1.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <script src="/js/config.js"></script>
+    <style>
+        /* API Documentation specific styles */
+        .api-section {
+            background-color: var(--white);
+            padding: var(--spacing-3xl) 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .api-section:last-child {
+            border-bottom: none;
+        }
+        
+        .api-header {
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        .api-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-2xl);
+        }
+        
+        .endpoint-card {
+            background-color: var(--white);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-2xl);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray-200);
+            transition: all var(--transition-normal);
+        }
+        
+        .endpoint-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .endpoint-method {
+            display: inline-block;
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--border-radius-sm);
+            font-weight: 700;
+            font-size: var(--font-size-sm);
+            margin-right: var(--spacing-md);
+            color: var(--white);
+        }
+        
+        .method-post {
+            background-color: var(--primary);
+        }
+        
+        .method-get {
+            background-color: var(--success);
+        }
+        
+        .endpoint-path {
+            font-family: monospace;
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        
+        .endpoint-description {
+            margin-bottom: var(--spacing-lg);
+            color: var(--gray-600);
+        }
+        
+        .code-block {
+            background-color: var(--gray-50);
+            border-radius: var(--border-radius-md);
+            padding: var(--spacing-lg);
+            font-family: monospace;
+            overflow-x: auto;
+            margin: var(--spacing-md) 0;
+            border: 1px solid var(--gray-200);
+        }
+        
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--spacing-lg) 0;
+        }
+        
+        .param-table th, 
+        .param-table td {
+            padding: var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .param-table th {
+            background-color: var(--gray-50);
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+        
+        .param-required {
+            color: var(--error);
+            font-weight: 600;
+        }
+        
+        .param-optional {
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+        
+        .response-example {
+            margin-top: var(--spacing-xl);
+        }
+        
+        /* Navigation styles moved to navigation.css */
+        
+        .api-intro {
+            max-width: 800px;
+            margin: 0 auto var(--spacing-3xl);
+        }
+        
+        .api-intro p {
+            color: var(--gray-600);
+            line-height: var(--line-height-relaxed);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius-full);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            margin-right: var(--spacing-sm);
+        }
+        
+        .badge-primary {
+            background-color: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+        }
+        
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+        
+        .badge-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-container container">
+            <div class="logo">
+                <span class="logo-text">Agent<span class="highlight">Smith</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="api.html" class="active">API</a>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero" style="padding: var(--spacing-3xl) 0;">
+        <div class="container">
+            <div class="hero-content" style="max-width: 800px; margin: 0 auto; text-align: center;">
+                <h1>Agent Smith <span class="gradient-text">API</span> Documentation</h1>
+                <p class="hero-subtitle">Everything you need to integrate our AI-powered email personalization service with your application.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="api-section">
+        <div class="container">
+            <div class="api-intro">
+                <h2>Getting Started</h2>
+                <p>
+                    Agent Smith provides a REST API that allows you to programmatically submit new signups and retrieve personalized email drafts.
+                    All API requests require authentication using your API key, which you can obtain from your account dashboard.
+                </p>
+                <p>
+                    The base URL for all API requests is: <code>https://api.agentsmith.ai</code>
+                </p>
+                <div class="code-block">
+                    <span style="color: var(--gray-500);"># Example API request using curl</span><br>
+                    curl -X POST https://api.agentsmith.ai/api/process-signup \<br>
+                    &nbsp;&nbsp;-H "Content-Type: application/json" \<br>
+                    &nbsp;&nbsp;-H "X-API-Key: your-api-key-here" \<br>
+                    &nbsp;&nbsp;-d '{"email": "john@acmecorp.com", "name": "John Smith"}'
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="api-section">
+        <div class="container">
+            <div class="api-header">
+                <h2>API Endpoints</h2>
+            </div>
+
+            <div class="api-grid">
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-post">POST</span>
+                        <span class="endpoint-path">/api/process-signup</span>
+                    </div>
+                    <div class="endpoint-description">
+                        <p>Processes a new signup and generates a personalized email draft based on domain research.</p>
+                        <div class="badge badge-primary">Requires Authentication</div>
+                    </div>
+                    <h4>Request Headers</h4>
+                    <div class="code-block">
+                        Content-Type: application/json<br>
+                        X-API-Key: your-api-key-here
+                    </div>
+                    <h4>Request Body Parameters</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>email</td>
+                                <td>string</td>
+                                <td><span class="param-required">Required</span></td>
+                                <td>User's email address (business email domains only)</td>
+                            </tr>
+                            <tr>
+                                <td>name</td>
+                                <td>string</td>
+                                <td><span class="param-required">Required</span></td>
+                                <td>User's full name</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h4>Response</h4>
+                    <div class="code-block response-example">
+                        {<br>
+                        &nbsp;&nbsp;"success": true,<br>
+                        &nbsp;&nbsp;"message": "Signup processing started",<br>
+                        &nbsp;&nbsp;"jobId": "job_a1b2c3d4e5f6",<br>
+                        &nbsp;&nbsp;"status": "pending"<br>
+                        }
+                    </div>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/job-status/:jobId</span>
+                    </div>
+                    <div class="endpoint-description">
+                        <p>Checks the status of a previously submitted job and retrieves the generated email when complete.</p>
+                        <div class="badge badge-primary">Requires Authentication</div>
+                    </div>
+                    <h4>Request Headers</h4>
+                    <div class="code-block">
+                        X-API-Key: your-api-key-here
+                    </div>
+                    <h4>URL Parameters</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>jobId</td>
+                                <td>string</td>
+                                <td><span class="param-required">Required</span></td>
+                                <td>The job ID returned from the process-signup endpoint</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h4>Response</h4>
+                    <div class="code-block response-example">
+                        {<br>
+                        &nbsp;&nbsp;"success": true,<br>
+                        &nbsp;&nbsp;"status": "completed",<br>
+                        &nbsp;&nbsp;"jobId": "job_a1b2c3d4e5f6",<br>
+                        &nbsp;&nbsp;"email": {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"subject": "Welcome to Agent Smith, John!",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"body": "Hi John,\n\nI noticed you recently signed up from acmecorp.com...",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"generated_at": "2025-04-07T14:05:23Z"<br>
+                        &nbsp;&nbsp;},<br>
+                        &nbsp;&nbsp;"domain_data": {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"company_name": "Acme Corporation",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"industry": "Technology",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"description": "Acme Corp is a leader in...",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"website_url": "https://acmecorp.com"<br>
+                        &nbsp;&nbsp;}<br>
+                        }
+                    </div>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/test-connectivity</span>
+                    </div>
+                    <div class="endpoint-description">
+                        <p>Tests API connectivity and verifies that your API key is valid.</p>
+                        <div class="badge badge-primary">Requires Authentication</div>
+                        <div class="badge badge-success">Diagnostic</div>
+                    </div>
+                    <h4>Request Headers</h4>
+                    <div class="code-block">
+                        X-API-Key: your-api-key-here
+                    </div>
+                    <h4>Response</h4>
+                    <div class="code-block response-example">
+                        {<br>
+                        &nbsp;&nbsp;"success": true,<br>
+                        &nbsp;&nbsp;"message": "API connection successful",<br>
+                        &nbsp;&nbsp;"company": "Your Company Name",<br>
+                        &nbsp;&nbsp;"api_version": "1.0",<br>
+                        &nbsp;&nbsp;"rate_limit_remaining": 998<br>
+                        }
+                    </div>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-header">
+                        <span class="endpoint-method method-get">GET</span>
+                        <span class="endpoint-path">/api/jobs</span>
+                    </div>
+                    <div class="endpoint-description">
+                        <p>Lists all active jobs for your API key.</p>
+                        <div class="badge badge-primary">Requires Authentication</div>
+                    </div>
+                    <h4>Request Headers</h4>
+                    <div class="code-block">
+                        X-API-Key: your-api-key-here
+                    </div>
+                    <h4>Query Parameters</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>status</td>
+                                <td>string</td>
+                                <td><span class="param-optional">Optional</span></td>
+                                <td>Filter by job status (pending, scraping, generating_email, completed, failed)</td>
+                            </tr>
+                            <tr>
+                                <td>limit</td>
+                                <td>integer</td>
+                                <td><span class="param-optional">Optional</span></td>
+                                <td>Number of jobs to return (default: 20, max: 100)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h4>Response</h4>
+                    <div class="code-block response-example">
+                        {<br>
+                        &nbsp;&nbsp;"success": true,<br>
+                        &nbsp;&nbsp;"jobs": [<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"jobId": "job_a1b2c3d4e5f6",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"status": "completed",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"email": "john@acmecorp.com",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name": "John Smith",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"domain": "acmecorp.com",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"created_at": "2025-04-06T09:15:23Z",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"completed_at": "2025-04-06T09:17:45Z"<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;},<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"jobId": "job_g7h8i9j0k1l2",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"status": "scraping",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"email": "sarah@techcorp.com",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"name": "Sarah Johnson",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"domain": "techcorp.com",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"created_at": "2025-04-07T14:05:23Z"<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;],<br>
+                        &nbsp;&nbsp;"total": 2,<br>
+                        &nbsp;&nbsp;"limit": 20<br>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="api-section">
+        <div class="container">
+            <div class="api-header">
+                <h2>Rate Limits & Authentication</h2>
+            </div>
+            <div class="api-grid">
+                <div class="endpoint-card">
+                    <h4>API Rate Limits</h4>
+                    <p>To ensure fair usage and availability of the service, all API endpoints are subject to rate limiting:</p>
+                    <ul style="margin-left: var(--spacing-xl); margin-bottom: var(--spacing-lg);">
+                        <li>Standard tier: 1000 requests per day</li>
+                        <li>Pro tier: 5000 requests per day</li>
+                        <li>Enterprise tier: Custom limits based on your agreement</li>
+                    </ul>
+                    <p>Rate limit headers are included in all API responses:</p>
+                    <div class="code-block">
+                        X-RateLimit-Limit: 1000<br>
+                        X-RateLimit-Remaining: 999<br>
+                        X-RateLimit-Reset: 1712545200 <span style="color: var(--gray-500);">// Unix timestamp</span>
+                    </div>
+                    
+                    <h4 style="margin-top: var(--spacing-2xl);">Authentication</h4>
+                    <p>All API requests require authentication using an API key provided in the X-API-Key header:</p>
+                    <div class="code-block">
+                        X-API-Key: your-api-key-here
+                    </div>
+                    <p>Never share your API key publicly or include it in client-side code. Your API key can be rotated from your dashboard if it is compromised.</p>
+                    
+                    <h4 style="margin-top: var(--spacing-2xl);">Error Responses</h4>
+                    <p>In case of an error, the API will return an appropriate HTTP status code and a JSON response with error details:</p>
+                    <div class="code-block">
+                        {<br>
+                        &nbsp;&nbsp;"success": false,<br>
+                        &nbsp;&nbsp;"error": "invalid_request",<br>
+                        &nbsp;&nbsp;"message": "The email parameter is required",<br>
+                        &nbsp;&nbsp;"status": 400<br>
+                        }
+                    </div>
+                    <p>Common status codes:</p>
+                    <ul style="margin-left: var(--spacing-xl);">
+                        <li><strong>400</strong> - Bad Request (invalid parameters)</li>
+                        <li><strong>401</strong> - Unauthorized (invalid or missing API key)</li>
+                        <li><strong>404</strong> - Not Found (resource or endpoint not found)</li>
+                        <li><strong>429</strong> - Too Many Requests (rate limit exceeded)</li>
+                        <li><strong>500</strong> - Internal Server Error</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="api-section">
+        <div class="container">
+            <div class="api-header">
+                <h2>Webhooks</h2>
+            </div>
+            <div class="api-grid">
+                <div class="endpoint-card">
+                    <h4>Email Generation Webhook</h4>
+                    <p>
+                        You can configure a webhook URL in your dashboard to receive notifications when email generation is complete.
+                        This is especially useful for long-running processes where you don't want to poll the API.
+                    </p>
+                    <h4>Webhook Payload</h4>
+                    <div class="code-block">
+                        {<br>
+                        &nbsp;&nbsp;"event": "email.generated",<br>
+                        &nbsp;&nbsp;"jobId": "job_a1b2c3d4e5f6",<br>
+                        &nbsp;&nbsp;"status": "completed",<br>
+                        &nbsp;&nbsp;"timestamp": "2025-04-07T14:17:45Z",<br>
+                        &nbsp;&nbsp;"data": {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"email": "john@acmecorp.com",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"name": "John Smith",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;"domain": "acmecorp.com"<br>
+                        &nbsp;&nbsp;}<br>
+                        }
+                    </div>
+                    <p>To acknowledge receipt of the webhook, your server should respond with a 200 OK status code.</p>
+                    <p>Failed webhook deliveries will be retried up to 3 times with exponential backoff.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="api-section">
+        <div class="container">
+            <div class="api-header">
+                <h2>SDK & Client Libraries</h2>
+            </div>
+            <div class="api-grid">
+                <div class="endpoint-card">
+                    <h4>Official Client Libraries</h4>
+                    <p>
+                        We provide official client libraries for popular programming languages to make integration easier:
+                    </p>
+                    <ul style="margin-left: var(--spacing-xl); margin-bottom: var(--spacing-lg);">
+                        <li><strong>JavaScript/Node.js:</strong> <a href="#" style="color: var(--primary);">agent-smith-node</a></li>
+                        <li><strong>Python:</strong> <a href="#" style="color: var(--primary);">agent-smith-python</a></li>
+                        <li><strong>PHP:</strong> <a href="#" style="color: var(--primary);">agent-smith-php</a></li>
+                        <li><strong>Ruby:</strong> <a href="#" style="color: var(--primary);">agent-smith-ruby</a></li>
+                    </ul>
+                    <h4>Node.js Example</h4>
+                    <div class="code-block">
+                        <span style="color: var(--primary);">const</span> AgentSmith = <span style="color: var(--primary);">require</span>('agent-smith-node');<br><br>
+                        <span style="color: var(--primary);">const</span> client = <span style="color: var(--primary);">new</span> AgentSmith.Client({<br>
+                        &nbsp;&nbsp;apiKey: <span style="color: var(--secondary);">'your-api-key-here'</span><br>
+                        });<br><br>
+                        <span style="color: var(--primary);">async function</span> <span style="color: var(--success);">processSignup</span>() {<br>
+                        &nbsp;&nbsp;<span style="color: var(--primary);">try</span> {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span style="color: var(--primary);">const</span> result = <span style="color: var(--primary);">await</span> client.processSignup({<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;email: <span style="color: var(--secondary);">'john@acmecorp.com'</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;name: <span style="color: var(--secondary);">'John Smith'</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;});<br><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;console.log(<span style="color: var(--secondary);">'Job started:'</span>, result.jobId);<br><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span style="color: var(--gray-500);">// Poll for completion</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span style="color: var(--primary);">const</span> jobResult = <span style="color: var(--primary);">await</span> client.waitForCompletion(result.jobId);<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;console.log(<span style="color: var(--secondary);">'Generated email:'</span>, jobResult.email);<br>
+                        &nbsp;&nbsp;} <span style="color: var(--primary);">catch</span> (error) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;console.error(<span style="color: var(--secondary);">'Error:'</span>, error.message);<br>
+                        &nbsp;&nbsp;}<br>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <span class="logo-text">Agent<span class="highlight">Smith</span></span>
+                    </div>
+                    <p>AI-powered email personalization that creates meaningful connections with your subscribers.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-links-column">
+                        <h4>Product</h4>
+                        <ul>
+                            <li><a href="#">Features</a></li>
+                            <li><a href="#">Pricing</a></li>
+                            <li><a href="api.html">API</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="#">About</a></li>
+                            <li><a href="#">Blog</a></li>
+                            <li><a href="#">Careers</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-links-column">
+                        <h4>Legal</h4>
+                        <ul>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                            <li><a href="#">Cookie Policy</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Agent Smith. All rights reserved.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

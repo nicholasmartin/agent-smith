@@ -1,0 +1,137 @@
+/* Form Handlers CSS for Agent Smith
+ * Styles for form status messages and job tracking notifications
+ */
+
+/* Form Status Messages */
+.form-status {
+  margin: 15px 0;
+  padding: 12px 15px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.status-error {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-left: 4px solid #d32f2f;
+}
+
+.status-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-left: 4px solid #2e7d32;
+}
+
+.status-loading {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border-left: 4px solid #1976d2;
+  position: relative;
+}
+
+.status-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid #1976d2;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Job Status Tracking */
+.job-status {
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.status-pending {
+  background-color: #fff8e1;
+  border-left: 4px solid #ffc107;
+}
+
+.status-scraping {
+  background-color: #e8eaf6;
+  border-left: 4px solid #3f51b5;
+}
+
+.status-generating {
+  background-color: #e0f7fa;
+  border-left: 4px solid #00bcd4;
+}
+
+.status-completed {
+  background-color: #e8f5e9;
+  border-left: 4px solid #4caf50;
+}
+
+.status-failed {
+  background-color: #ffebee;
+  border-left: 4px solid #f44336;
+}
+
+.status-message {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.status-details {
+  font-size: 12px;
+  color: #757575;
+}
+
+.status-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 10px;
+  position: relative;
+}
+
+.status-pending .status-icon::before {
+  content: "⏳";
+}
+
+.status-scraping .status-icon::before {
+  content: "🔍";
+}
+
+.status-generating .status-icon::before {
+  content: "✍️";
+}
+
+.status-completed .status-icon::before {
+  content: "✅";
+}
+
+.status-failed .status-icon::before {
+  content: "❌";
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .form-status, .job-status {
+    padding: 10px;
+    font-size: 14px;
+  }
+  
+  .status-message {
+    font-size: 14px;
+  }
+}

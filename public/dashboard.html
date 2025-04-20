@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Smith Dashboard</title>
+  <link rel="icon" href="images/favicon.png" type="image/png">
+  
+  <!-- Supabase Configuration -->
+  <meta name="supabase-url" content="https://jnpdszffuosiirapfvwp.supabase.co">
+  <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODE2MjM0NDIsImV4cCI6MTk5NzE5OTQ0Mn0.S23qyYgN3-Uuq6Iy_P-Qw0OUlpKh_WXnIl6c-1-43Vc">
+  
+  <!-- TailAdmin CSS -->
+  <link rel="stylesheet" href="css/tailwind.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Sentry Error Tracking - Load before other scripts -->
+  <script src="js/sentry-client.js"></script>
+  
+  <!-- Supabase -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+</head>
+    <style>
+        /* Dashboard styles */
+        .dashboard-container {
+            display: flex;
+            min-height: calc(100vh - 140px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+        
+        .user-info {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .user-name {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .user-email {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .nav-item {
+            padding: 10px 0;
+            cursor: pointer;
+        }
+        
+        .nav-item.active {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .job-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .job-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-pending {
+            background-color: #fff8e1;
+            color: #ff8f00;
+        }
+        
+        .status-scraping {
+            background-color: #e1f5fe;
+            color: #0288d1;
+        }
+        
+        .status-generating_email {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .status-completed {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .status-failed {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .email-content {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        
+        /* Password modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body
+  x-data="{ sidebarOpen: false }"
+  class="font-inter bg-gray-50">
+  <!-- Password Setting Modal -->
+  <div id="password-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+      <h2 class="mb-4 text-xl font-bold">Set Your Password</h2>
+      <p class="mb-6 text-gray-600">Please set a password to complete your account setup.</p>
+      
+      <form id="password-form" class="space-y-4">
+        <div>
+          <label for="new-password" class="mb-2 block text-sm font-medium">New Password</label>
+          <input type="password" id="new-password" class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5" required>
+        </div>
+        
+        <div>
+          <label for="confirm-password" class="mb-2 block text-sm font-medium">Confirm Password</label>
+          <input type="password" id="confirm-password" class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5" required>
+        </div>
+        
+        <button type="submit" class="w-full rounded-lg bg-blue-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-700">Set Password</button>
+        
+        <div id="password-status" class="status"></div>
+      </form>
+    </div>
+  </div>
+    
+  <!-- ===== Page Wrapper Start ===== -->
+  <div class="flex h-screen overflow-hidden">
+    <!-- ===== Sidebar Start ===== -->
+    <aside
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+      class="absolute left-0 top-0 z-40 h-full w-72 bg-white shadow-lg transition-transform duration-300 xl:static xl:translate-x-0"
+    >
+      <!-- Sidebar Header -->
+      <div class="flex items-center justify-between gap-2 px-6 py-5 lg:py-6">
+        <a href="index.html" class="text-xl font-semibold text-black">
+          Agent<span class="text-primary">Smith</span>
+        </a>
+        <button
+          @click="sidebarOpen = false"
+          class="block xl:hidden"
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Sidebar Menu -->
+      <nav class="py-4">
+        <ul class="menu">
+          <!-- Dashboard -->
+          <li class="menu-item">
+            <a href="dashboard.html" class="active">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8.5 15.5V8.5H1.5V15.5H8.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M18.5 15.5V1.5H11.5V15.5H18.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M8.5 18.5V15.5H5.5V18.5H8.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M14.5 18.5V15.5H11.5V18.5H14.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Dashboard
+            </a>
+          </li>
+          <!-- Results -->
+          <li class="menu-item">
+            <a href="results.html">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18.3333 9.16667V5.83333C18.3333 4.91286 17.5871 4.16667 16.6666 4.16667H3.33331C2.41284 4.16667 1.66665 4.91286 1.66665 5.83333V14.1667C1.66665 15.0871 2.41284 15.8333 3.33331 15.8333H16.6666C17.5871 15.8333 18.3333 15.0871 18.3333 14.1667V10.8333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M1.66669 8.33333H18.3334" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Results
+            </a>
+          </li>
+          <!-- Profile -->
+          <li class="menu-item">
+            <a href="profile.html">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9.99996 11.6667C12.3012 11.6667 14.1666 9.8012 14.1666 7.5C14.1666 5.1988 12.3012 3.33334 9.99996 3.33334C7.69877 3.33334 5.83331 5.1988 5.83331 7.5C5.83331 9.8012 7.69877 11.6667 9.99996 11.6667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M5 16.6667C5 15 7.5 11.6667 10 11.6667C12.5 11.6667 15 15 15 16.6667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Profile
+            </a>
+          </li>
+          <!-- New Request -->
+          <li class="menu-item">
+            <a href="new-request.html">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 4.16666V15.8333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M4.16669 10H15.8334" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              New Request
+            </a>
+          </li>
+          <!-- Logout -->
+          <li class="menu-item mt-auto">
+            <a href="#" id="logout-link">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7.5 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V4.16667C2.5 3.72464 2.67559 3.30072 2.98816 2.98816C3.30072 2.67559 3.72464 2.5 4.16667 2.5H7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M13.3333 14.1667L17.5 10L13.3333 5.83334" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M17.5 10H7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Logout
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+    <!-- ===== Sidebar End ===== -->
+
+    <!-- ===== Content Area Start ===== -->
+    <div class="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <!-- ===== Header Start ===== -->
+      <header class="sticky top-0 z-30 flex w-full bg-white shadow">
+        <div class="flex flex-grow items-center justify-between py-4 px-4 md:px-6 2xl:px-11">
+          <div class="flex items-center gap-2 sm:gap-4">
+            <!-- Hamburger Toggle Button -->
+            <button
+              @click="sidebarOpen = !sidebarOpen"
+              class="block xl:hidden"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 7.5H17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M2.5 12.5H17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <a href="dashboard.html" class="block xl:hidden">
+              Agent<span class="text-primary">Smith</span>
+            </a>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <!-- User Menu -->
+            <div class="relative" x-data="{ dropdownOpen: false }">
+              <button @click="dropdownOpen = !dropdownOpen" class="flex items-center gap-2">
+                <span class="hidden text-right sm:block">
+                  <span class="block text-sm font-medium text-black user-name">User Name</span>
+                  <span class="block text-xs user-email">user@example.com</span>
+                </span>
+                <span class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-semibold user-initials">
+                  US
+                </span>
+              </button>
+              <!-- Dropdown -->
+              <div
+                x-show="dropdownOpen"
+                @click.outside="dropdownOpen = false"
+                class="absolute right-0 mt-2 w-48 rounded-md bg-white py-2 shadow-lg"
+                x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-75"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+              >
+                <a href="profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                <a href="#" id="dropdown-logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+      <!-- ===== Header End ===== -->
+    
+      <!-- ===== Main Content Start ===== -->
+      <main class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+        <!-- Page Title -->
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold text-black">Dashboard</h2>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
+          <!-- Total Jobs Card -->
+          <div class="rounded-md border border-gray-200 bg-white px-5 py-6 shadow-md">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xl font-semibold text-black" id="total-jobs-count">0</h4>
+                <p class="text-sm text-gray-600">Total Jobs</p>
+              </div>
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18.3333 9.16667V5.83333C18.3333 4.91286 17.5871 4.16667 16.6666 4.16667H3.33331C2.41284 4.16667 1.66665 4.91286 1.66665 5.83333V14.1667C1.66665 15.0871 2.41284 15.8333 3.33331 15.8333H16.6666C17.5871 15.8333 18.3333 15.0871 18.3333 14.1667V10.8333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Completed Jobs Card -->
+          <div class="rounded-md border border-gray-200 bg-white px-5 py-6 shadow-md">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xl font-semibold text-black" id="completed-jobs-count">0</h4>
+                <p class="text-sm text-gray-600">Completed</p>
+              </div>
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.6667 5L7.50004 14.1667L3.33337 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Pending Jobs Card -->
+          <div class="rounded-md border border-gray-200 bg-white px-5 py-6 shadow-md">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xl font-semibold text-black" id="pending-jobs-count">0</h4>
+                <p class="text-sm text-gray-600">In Progress</p>
+              </div>
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 5V10L13.3333 11.6667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M10.0001 18.3333C14.6025 18.3333 18.3334 14.6024 18.3334 10C18.3334 5.39763 14.6025 1.66667 10.0001 1.66667C5.39771 1.66667 1.66675 5.39763 1.66675 10C1.66675 14.6024 5.39771 18.3333 10.0001 18.3333Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Failed Jobs Card -->
+          <div class="rounded-md border border-gray-200 bg-white px-5 py-6 shadow-md">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xl font-semibold text-black" id="failed-jobs-count">0</h4>
+                <p class="text-sm text-gray-600">Failed</p>
+              </div>
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Recent Results Table -->
+        <div class="mt-6 rounded-md border border-gray-200 bg-white px-5 pb-5 pt-6 shadow-md">
+          <h4 class="mb-6 text-xl font-semibold text-black">Recent Results</h4>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full table-auto">
+              <thead>
+                <tr class="bg-gray-50 text-left">
+                  <th class="py-4 px-4 font-medium text-black">Domain</th>
+                  <th class="py-4 px-4 font-medium text-black">Date</th>
+                  <th class="py-4 px-4 font-medium text-black">Status</th>
+                  <th class="py-4 px-4 font-medium text-black">Action</th>
+                </tr>
+              </thead>
+              <tbody id="jobs-list">
+                <tr>
+                  <td colspan="4" class="py-4 text-center">Loading your jobs...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Profile Form (Hidden by default) -->
+        <div id="profile-form" class="mt-6 hidden rounded-md border border-gray-200 bg-white px-5 pb-5 pt-6 shadow-md">
+          <h4 class="mb-6 text-xl font-semibold text-black">My Profile</h4>
+          
+          <div class="space-y-4">
+            <div>
+              <label for="profile-name" class="mb-2 block text-sm font-medium text-gray-700">Name</label>
+              <input type="text" id="profile-name" class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5">
+            </div>
+            
+            <div>
+              <label for="profile-email" class="mb-2 block text-sm font-medium text-gray-700">Email</label>
+              <input type="email" id="profile-email" class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5" disabled>
+            </div>
+            
+            <button id="update-profile-btn" class="rounded-lg bg-blue-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-700">Update Profile</button>
+            
+            <div id="profile-status" class="hidden rounded-md p-4"></div>
+          </div>
+        </div>
+        
+        <!-- New Request Form (Hidden by default) -->
+        <div id="new-request-form" class="mt-6 hidden rounded-md border border-gray-200 bg-white px-5 pb-5 pt-6 shadow-md">
+          <h4 class="mb-6 text-xl font-semibold text-black">Submit New Request</h4>
+          <p class="mb-4 text-gray-600">Need another personalized email? Submit a new request below.</p>
+          
+          <div class="space-y-4">
+            <div>
+              <label for="new-email" class="mb-2 block text-sm font-medium text-gray-700">Email Address</label>
+              <input type="email" id="new-email" class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5" disabled>
+            </div>
+            
+            <div>
+              <label for="new-name" class="mb-2 block text-sm font-medium text-gray-700">Name</label>
+              <input type="text" id="new-name" class="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5">
+            </div>
+            
+            <button id="submit-request-btn" class="rounded-lg bg-blue-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-700">Submit Request</button>
+            
+            <div id="request-status" class="hidden rounded-md p-4"></div>
+          </div>
+        </div>
+      </main>
+      <!-- ===== Main Content End ===== -->
+    
+    </div>
+    <!-- ===== Content Area End ===== -->
+  </div>
+  <!-- ===== Page Wrapper End ===== -->
+
+  <!-- JavaScript Libraries -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="js/main.js"></script>
+  <!-- auth-handler.js removed in favor of unified supabase-client.js -->
+  
+  <script>
+    // Initialize dashboard when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      // Show navigation items based on click
+      document.querySelectorAll('.menu-item a').forEach(link => {
+        link.addEventListener('click', (e) => {
+          // Skip for logout link
+          if (link.id === 'logout-link') return;
+          
+          e.preventDefault();
+          const href = link.getAttribute('href');
+          
+          // Remove active class from all links
+          document.querySelectorAll('.menu-item a').forEach(item => {
+            item.classList.remove('active');
+          });
+          
+          // Add active class to clicked link
+          link.classList.add('active');
+          
+          // Show/hide appropriate forms based on the link
+          const profileForm = document.getElementById('profile-form');
+          const requestForm = document.getElementById('new-request-form');
+          const resultsTable = document.querySelector('.mt-6:not(#profile-form):not(#new-request-form)');
+          
+          if (href === 'profile.html') {
+            profileForm.classList.remove('hidden');
+            requestForm.classList.add('hidden');
+            resultsTable.classList.add('hidden');
+          } else if (href === 'new-request.html') {
+            profileForm.classList.add('hidden');
+            requestForm.classList.remove('hidden');
+            resultsTable.classList.add('hidden');
+          } else {
+            profileForm.classList.add('hidden');
+            requestForm.classList.add('hidden');
+            resultsTable.classList.remove('hidden');
+          }
+        });
+      });
+      
+      // Update job counts
+      async function updateJobCounts() {
+        try {
+          const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
+          if (sessionError || !session) return;
+          
+          const response = await fetch('/api/user/jobs', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          });
+          
+          if (!response.ok) return;
+          
+          const { jobs } = await response.json();
+          
+          if (!jobs) return;
+          
+          // Count jobs by status
+          const counts = {
+            total: jobs.length,
+            completed: 0,
+            pending: 0,
+            failed: 0
+          };
+          
+          jobs.forEach(job => {
+            if (job.status === 'completed') {
+              counts.completed++;
+            } else if (job.status === 'failed') {
+              counts.failed++;
+            } else {
+              counts.pending++;
+            }
+          });
+          
+          // Update count elements
+          document.getElementById('total-jobs-count').textContent = counts.total;
+          document.getElementById('completed-jobs-count').textContent = counts.completed;
+          document.getElementById('pending-jobs-count').textContent = counts.pending;
+          document.getElementById('failed-jobs-count').textContent = counts.failed;
+          
+        } catch (error) {
+          console.error('Error updating job counts:', error);
+        }
+      }
+      
+      // Initialize counts
+      updateJobCounts();
+    });
+  </script>
+</body>
+</html>
