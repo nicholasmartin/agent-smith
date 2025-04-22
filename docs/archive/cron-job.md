@@ -12,6 +12,7 @@ This document outlines the step-by-step process to implement Supabase storage an
 
 ### Phase 1: Database Setup
 
+
 1. **Create Supabase Tables**
    ```sql
    -- Create jobs table
