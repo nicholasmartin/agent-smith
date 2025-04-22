@@ -100,8 +100,8 @@ function enhanceClient(client) {
 window.supabase = initSupabase();
 
 /**
- * Unified Supabase Session Handler (magic link/session persistence)
- * Handles magic link tokens, session establishment, and protected route checks
+ * Enhanced Supabase Session Handler
+ * Works with server-side auth middleware and properly handles magic links
  */
 async function handleSupabaseSession() {
   if (!window.supabase) {
@@ -115,19 +115,9 @@ async function handleSupabaseSession() {
     return;
   }
   
-  // Create a transaction to track the entire auth flow
-  let transaction;
-  if (window.Sentry && Sentry.startTransaction) {
-    transaction = Sentry.startTransaction({
-      name: 'Authentication Flow',
-      op: 'auth.session_handling',
-    });
-    // Set the transaction on the scope so all spans are attached to it
-    Sentry.configureScope(scope => scope.setSpan(transaction));
-  }
-  
   try {
-    // Add breadcrumb for session handling start
+    // Log session handling start
+    console.log('[SESSION] Checking authentication state...');
     if (window.Sentry) {
       Sentry.addBreadcrumb({
         category: 'auth',
@@ -141,377 +131,106 @@ async function handleSupabaseSession() {
       });
     }
     
-    // Check if we've already processed magic link auth in this session
-    // This prevents double-processing of the same auth parameters
-    const magicLinkProcessed = sessionStorage.getItem('magicLinkProcessed');
-    if (magicLinkProcessed) {
-      console.log('[SESSION] Magic link already processed in this session, skipping authentication parameter check');
-      if (window.Sentry) {
-        Sentry.addBreadcrumb({
-          category: 'auth',
-          message: 'Magic link already processed',
-          level: 'info'
-        });
-      }
-      await checkProtectedRoute();
-      return;
-    }
-    
-    console.log('[SESSION] Checking authentication state...');
-    
-    // 1. Check for authentication parameters in URL hash
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const hasAccessToken = hashParams.has('access_token');
-    const hasRefreshToken = hashParams.has('refresh_token');
-    const hasError = hashParams.has('error');
-    const hasAuthParams = hasAccessToken || hasRefreshToken || hasError;
-    
-    // Track auth parameters in Sentry
-    if (window.Sentry) {
-      Sentry.setTag('has_auth_params', hasAuthParams ? 'yes' : 'no');
-      Sentry.setTag('has_access_token', hasAccessToken ? 'yes' : 'no');
-      Sentry.setTag('has_refresh_token', hasRefreshToken ? 'yes' : 'no');
-      Sentry.setTag('has_error', hasError ? 'yes' : 'no');
-    }
-    
-    // Process auth parameters if present
-    if (hasAuthParams) {
-      console.log('[SESSION] Auth parameters detected in URL hash');
-      if (window.Sentry) {
-        Sentry.addBreadcrumb({
-          category: 'auth',
-          message: 'Auth parameters detected in URL',
-          level: 'info'
-        });
-      }
+    // Check for hash parameters (magic link authentication)
+    if (window.location.hash) {
+      console.log('[SESSION] URL hash detected:', window.location.hash);
       
-      // Handle auth errors
-      if (hasError) {
-        const errorDescription = hashParams.get('error_description');
-        console.error('[SESSION] Authentication error:', errorDescription);
-        if (window.Sentry) {
-          Sentry.captureMessage(`Authentication error: ${errorDescription}`, {
-            level: 'error',
-            tags: { auth_stage: 'hash_params' }
-          });
-        }
-        // Redirect to login if there's an auth error
-        window.location.href = '/login.html';
-        return;
-      }
+      // Parse hash parameters
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const hasAuthParams = hashParams.has('access_token') || hashParams.has('refresh_token') || hashParams.has('type');
       
-      // Process valid auth tokens
-      if (hasAccessToken && hasRefreshToken) {
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        console.log('[SESSION] Setting session with tokens...');
-        
-        // Create a span for token processing
-        let tokenSpan;
-        if (transaction) {
-          tokenSpan = transaction.startChild({
-            op: 'auth.process_tokens',
-            description: 'Process auth tokens from URL'
-          });
-        }
-        
-        // Immediately clean up URL hash for security before processing
-        // This helps prevent token from being consumed twice
-        if (window.history && window.history.replaceState) {
-          window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
-          console.log('[SESSION] Cleaned up URL hash parameters');
-          if (window.Sentry) {
-            Sentry.addBreadcrumb({
-              category: 'auth',
-              message: 'Cleaned URL hash parameters',
-              data: { newUrl: window.location.href },
-              level: 'info'
-            });
-          }
-        }
-        
-        // Now set the session with the tokens
-        let setSessionSpan;
-        if (transaction) {
-          setSessionSpan = transaction.startChild({
-            op: 'auth.set_session',
-            description: 'Set Supabase session with tokens'
-          });
-        }
-        
-        const { data, error } = await window.supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        
-        if (setSessionSpan) setSessionSpan.finish();
-        
-        if (error) {
-          console.error('[SESSION] Error setting session:', error);
-          if (window.Sentry) {
-            Sentry.captureException(error, {
-              tags: { auth_stage: 'set_session' },
-              extra: { error_message: error.message }
-            });
-          }
-          window.location.href = '/login.html';
-          return;
-        }
-        
-        console.log('[SESSION] Session established successfully:', 
-          data.session ? `User: ${data.session.user?.email}` : 'No user');
-        
+      if (hasAuthParams) {
+        console.log('[SESSION] Auth parameters detected in hash');
         if (window.Sentry) {
           Sentry.addBreadcrumb({
             category: 'auth',
-            message: 'Session established successfully',
-            data: { 
-              hasSession: !!data.session,
-              userEmail: data.session?.user?.email
-            },
+            message: 'Auth parameters detected in hash',
             level: 'info'
           });
         }
         
-        // Add delay to ensure session is fully established
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Set flag to indicate we've already processed a magic link
-        // This prevents the same token from being consumed twice
-        sessionStorage.setItem('magicLinkProcessed', 'true');
-        console.log('[SESSION] Set magicLinkProcessed flag in sessionStorage');
-        
-        if (tokenSpan) tokenSpan.finish();
+        // If we're not already on the callback route, redirect to it
+        if (window.location.pathname !== '/auth/callback') {
+          console.log('[SESSION] Redirecting to callback handler with auth params');
+          
+          // Preserve the current path to redirect back after auth
+          const currentPath = window.location.pathname;
+          const redirectTo = currentPath !== '/login' ? currentPath : '/dashboard';
+          
+          // Build callback URL with auth parameters and redirect_to
+          const callbackUrl = `/auth/callback?${window.location.hash.substring(1)}&redirect_to=${encodeURIComponent(redirectTo)}`;
+          window.location.href = callbackUrl;
+          return;
+        }
       }
     }
     
-    // 2. Finally check protection status of current route
-    let routeCheckSpan;
-    if (transaction) {
-      routeCheckSpan = transaction.startChild({
-        op: 'auth.check_protected_route',
-        description: 'Check if current route is protected'
+    // Give Supabase time to establish the session
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Check current session state
+    console.log('[SESSION] Checking session state');
+    const { data: { session }, error } = await window.supabase.auth.getSession();
+    
+    if (error) {
+      console.error('[SESSION] Error getting session:', error);
+      if (window.Sentry) {
+        Sentry.captureException(error, {
+          tags: { component: 'session_handler' }
+        });
+      }
+      return;
+    }
+    
+    console.log('[SESSION] Session state:', !!session);
+    if (window.Sentry) {
+      Sentry.addBreadcrumb({
+        category: 'auth',
+        message: 'Session state checked',
+        data: { hasSession: !!session },
+        level: 'info'
       });
     }
     
-    await checkProtectedRoute();
-    
-    if (routeCheckSpan) routeCheckSpan.finish();
-    
+    // Clean up URL after authentication by removing hash fragments
+    if (window.location.hash && session) {
+      // Only clean up if we have both a hash and a session
+      const cleanUrl = window.location.href.split('#')[0];
+      window.history.replaceState({}, document.title, cleanUrl);
+      console.log('[SESSION] Cleaned up URL after authentication');
+    }
   } catch (err) {
-    console.error('[SESSION] Error in unified session handler:', err);
+    console.error('[SESSION] Error in session handler:', err);
     if (window.Sentry) {
       Sentry.captureException(err, {
         tags: { component: 'session_handler' }
       });
     }
-    window.location.href = '/login.html';
-  } finally {
-    // Finish the transaction
-    if (transaction) transaction.finish();
   }
 }
 
 // Single event listener for handling authentication and session persistence
 document.addEventListener('DOMContentLoaded', handleSupabaseSession);
 
-// Add listener for page unload to clean up session flags
-window.addEventListener('beforeunload', () => {
-  // Remove the magic link processed flag to ensure clean state on next load
-  sessionStorage.removeItem('magicLinkProcessed');
-});
+// No need for session flags cleanup with server-side auth
 
 // processAuthParameters function has been removed and its functionality consolidated into handleSupabaseSession
 
-// Function to check if current route is protected and requires auth
+// Simplified protected route check function
+// This becomes much simpler as server handles protection
 async function checkProtectedRoute() {
-  // Check if we're on a protected page
-  const protectedPaths = ['/dashboard.html', '/dashboard', '/profile.html', '/settings.html'];
-  const currentPath = window.location.pathname;
+  // No need to do anything - server middleware handles protection
+  console.log('[PROTECT] Route protection handled by server middleware');
   
-  console.log('🔍 [PROTECT] Checking protected route:', currentPath);
-  
-  // Track route check in Sentry
   if (window.Sentry) {
     Sentry.addBreadcrumb({
       category: 'route',
-      message: 'Checking protected route',
+      message: 'Route protection handled by server middleware',
       data: { 
-        path: currentPath,
-        isProtected: protectedPaths.some(path => currentPath.includes(path)),
-        referrer: document.referrer,
+        path: window.location.pathname,
         url: window.location.href
       },
       level: 'info'
     });
-  }
-  
-  // Check if we've already processed magic link auth in this session
-  const magicLinkProcessed = sessionStorage.getItem('magicLinkProcessed');
-  if (magicLinkProcessed) {
-    console.log('🔍 [PROTECT] Magic link already processed, skipping additional auth checks');
-    if (window.Sentry) {
-      Sentry.setTag('magic_link_processed', 'true');
-    }
-  } else if (window.Sentry) {
-    Sentry.setTag('magic_link_processed', 'false');
-  }
-  
-  // Check if there are any remaining auth parameters in the URL
-  // This is a safety check, as they should have been cleaned by handleSupabaseSession
-  const hashParams = new URLSearchParams(window.location.hash.substring(1));
-  const hasAuthParams = hashParams.has('access_token') || hashParams.has('refresh_token');
-  
-  // Track auth params in Sentry
-  if (window.Sentry) {
-    Sentry.setTag('has_auth_params_in_route_check', hasAuthParams ? 'yes' : 'no');
-  }
-  
-  // If somehow auth params are still in URL, remove them
-  if (hasAuthParams) {
-    console.log('🔍 [PROTECT] Auth parameters found in URL during route check (unexpected)');
-    if (window.Sentry) {
-      Sentry.captureMessage('Auth parameters found in URL during route check (unexpected)', {
-        level: 'warning',
-        tags: { component: 'route_protection' }
-      });
-    }
-    
-    // Clean up URL immediately to prevent double processing
-    if (window.history && window.history.replaceState) {
-      window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
-      console.log('🔍 [PROTECT] Cleaned up URL hash parameters');
-      if (window.Sentry) {
-        Sentry.addBreadcrumb({
-          category: 'auth',
-          message: 'Cleaned URL hash parameters during route check',
-          level: 'info'
-        });
-      }
-    }
-  }
-  
-  const isProtectedRoute = protectedPaths.some(path => currentPath.includes(path));
-  
-  if (isProtectedRoute) {
-    console.log('🔍 [PROTECT] Protected route detected:', currentPath);
-    if (window.Sentry) {
-      Sentry.addBreadcrumb({
-        category: 'route',
-        message: 'Protected route detected',
-        data: { path: currentPath },
-        level: 'info'
-      });
-    }
-    
-    // If we're on a protected page, ensure we're authenticated
-    if (window.supabase) {
-      try {
-        console.log('🔍 [PROTECT] Checking session for protected route');
-        
-        // Create a timestamp to measure how long the session check takes
-        const startTime = Date.now();
-        if (window.Sentry) {
-          Sentry.addBreadcrumb({
-            category: 'auth',
-            message: 'Starting session check for protected route',
-            level: 'info'
-          });
-        }
-        
-        // Add a longer delay to give Supabase time to establish the session
-        // This helps prevent flickering redirects after clicking magic links
-        const delayMs = 1000;
-        console.log('🔍 [PROTECT] Adding delay of', delayMs, 'ms before session check');
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        
-        console.log('🔍 [PROTECT] Delay complete, getting session');
-        const { data: { session } } = await window.supabase.auth.getSession();
-        const sessionCheckDuration = Date.now() - startTime;
-        
-        console.log('🔍 [PROTECT] Current session:', !!session, 
-          session ? `User: ${session.user?.email}` : 'No user');
-        
-        // Track session check in Sentry
-        if (window.Sentry) {
-          Sentry.addBreadcrumb({
-            category: 'auth',
-            message: 'Session check complete',
-            data: { 
-              hasSession: !!session,
-              userEmail: session?.user?.email,
-              checkDurationMs: sessionCheckDuration,
-              currentUrl: window.location.href
-            },
-            level: 'info'
-          });
-          
-          // Set important tags for filtering
-          Sentry.setTag('has_session', !!session ? 'yes' : 'no');
-          Sentry.setTag('protected_route', 'yes');
-        }
-        
-        if (!session) {
-          console.log('🔍 [PROTECT] No active session, redirecting to login');
-          
-          // Capture the redirect event in Sentry
-          if (window.Sentry) {
-            Sentry.captureMessage('Redirecting to login from protected route - No session', {
-              level: 'warning',
-              tags: { 
-                redirect_reason: 'no_session',
-                from_path: currentPath,
-                to_path: '/login.html',
-                magic_link_processed: magicLinkProcessed ? 'yes' : 'no'
-              }
-            });
-          }
-          
-          window.location.href = '/login.html';
-        } else {
-          console.log('🔍 [PROTECT] Valid session found, staying on protected route');
-          if (window.Sentry) {
-            Sentry.addBreadcrumb({
-              category: 'auth',
-              message: 'Valid session for protected route',
-              level: 'info'
-            });
-          }
-        }
-      } catch (error) {
-        console.error('🔍 [PROTECT] Error checking authentication:', error);
-        
-        // Capture the error in Sentry
-        if (window.Sentry) {
-          Sentry.captureException(error, {
-            tags: { 
-              component: 'route_protection',
-              error_type: 'session_check_failed'
-            },
-            extra: {
-              currentPath,
-              magicLinkProcessed: !!magicLinkProcessed
-            }
-          });
-        }
-        
-        window.location.href = '/login.html';
-      }
-    } else {
-      // If Supabase client isn't available, redirect to login
-      console.error('🔍 [PROTECT] Supabase client not available');
-      
-      if (window.Sentry) {
-        Sentry.captureMessage('Supabase client not available for protected route check', {
-          level: 'error',
-          tags: { component: 'route_protection' }
-        });
-      }
-      
-      window.location.href = '/login.html';
-    }
-  } else if (window.Sentry) {
-    // Not a protected route
-    Sentry.setTag('protected_route', 'no');
   }
 }

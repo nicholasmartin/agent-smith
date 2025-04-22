@@ -204,7 +204,7 @@
             supabase.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
                     // Redirect to dashboard if already authenticated
-                    window.location.href = '/dashboard.html';
+                    window.location.href = '/dashboard';
                 }
             });
             
@@ -231,7 +231,7 @@
                     if (error) throw error;
                     
                     // Redirect to dashboard on successful login
-                    window.location.href = '/dashboard.html';
+                    window.location.href = '/dashboard';
                 } catch (error) {
                     console.error('Error signing in:', error);
                     loginStatus.textContent = error.message || 'Error signing in';
@@ -256,7 +256,7 @@
                     const { error } = await supabase.auth.signInWithOtp({
                         email,
                         options: {
-                            emailRedirectTo: window.location.origin + '/dashboard.html'
+                            emailRedirectTo: window.location.origin + '/auth/callback?redirect_to=/dashboard'
                         }
                     });
                     

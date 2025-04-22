@@ -76,10 +76,11 @@ function setupSupabaseSignup() {
     
     try {
       // Use Supabase's passwordless authentication with magic link
+      // Update to use the new auth callback endpoint
       const { data, error } = await supabaseClient.auth.signInWithOtp({
         email: email,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?redirect_to=/dashboard`,
           data: {
             name: name
           }
