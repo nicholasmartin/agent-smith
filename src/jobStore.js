@@ -122,17 +122,20 @@ async function updateJobWithScrapeResult(jobId, scrapeResult) {
  * Update job with email draft and mark as completed
  * @param {string} jobId - Database job ID
  * @param {Object} emailDraft - Generated email draft with subject and body
+ * @param {boolean} [emailSent=false] - Whether the email has been sent
  * @returns {Object} Updated job data
  */
-async function completeJobWithEmail(jobId, emailDraft) {
+async function completeJobWithEmail(jobId, emailDraft, emailSent = false) {
   try {
-    console.log(`Completing job ${jobId} with email draft`);
+    console.log(`Completing job ${jobId} with email draft (email_sent: ${emailSent})`);
     
     const { data, error } = await supabase
       .from('jobs')
       .update({
         email_draft: emailDraft,
+        email_content: JSON.stringify(emailDraft), // Store as JSON string for easier retrieval
         status: 'completed',
+        email_sent: emailSent,
         updated_at: new Date().toISOString(),
         completed_at: new Date().toISOString()
       })
@@ -290,30 +293,56 @@ async function incrementRetryCount(jobId) {
 
 /**
  * Get jobs by status
- * @param {string} status - Job status to filter by
- * @param {number} limit - Maximum number of jobs to retrieve
+ * @param {string} status - Status to filter by
  * @returns {Array} Array of jobs with the specified status
  */
-async function getJobsByStatus(status, limit = 20) {
+async function getJobsByStatus(status) {
   try {
-    console.log(`Getting up to ${limit} jobs with status: ${status}`);
+    console.log(`Getting jobs with status: ${status}`);
     
     const { data, error } = await supabase
       .from('jobs')
       .select('*')
       .eq('status', status)
-      .order('updated_at', { ascending: false })
-      .limit(limit);
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error(`Error getting jobs with status ${status}:`, error);
       throw error;
     }
     
-    console.log(`Found ${data.length} jobs with status ${status}`);
-    return data;
+    return data || [];
   } catch (error) {
     console.error(`Failed to get jobs with status ${status}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get jobs by status and email sent flag
+ * @param {string} status - Status to filter by
+ * @param {boolean} emailSent - Email sent flag to filter by
+ * @returns {Array} Array of jobs matching the criteria
+ */
+async function getJobsByStatusAndEmailSent(status, emailSent) {
+  try {
+    console.log(`Getting jobs with status: ${status} and email_sent: ${emailSent}`);
+    
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('status', status)
+      .eq('email_sent', emailSent)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error(`Error getting jobs with status ${status} and email_sent ${emailSent}:`, error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error(`Failed to get jobs with status ${status} and email_sent ${emailSent}:`, error);
     throw error;
   }
 }
@@ -414,14 +443,14 @@ async function updateJobMetadata(jobId, metadata) {
 
 module.exports = {
   createJob,
+  getJobById,
   updateJobWithScrapeId,
   updateJobWithScrapeResult,
   completeJobWithEmail,
   markJobAsFailed,
   getPendingJobs,
-  getJobById,
-  incrementRetryCount,
   getJobsByStatus,
+  getJobsByStatusAndEmailSent,
   updateJobWithUserId,
   markEmailSent,
   updateJobMetadata

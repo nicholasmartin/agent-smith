@@ -4,6 +4,7 @@ const emailGenerator = require('./emailGenerator');
 const slackNotifier = require('./slackNotifier');
 const jobStore = require('./jobStore');
 const supabase = require('./supabaseClient');
+const emailService = require('./emailService');
 
 /**
  * Process a new signup by checking the domain and starting the scraping job
@@ -188,12 +189,34 @@ async function checkJobStatus(jobId) {
           job.company_id // Pass company ID directly
         );
         
-        // Remove Slack notification - email will be sent through Supabase Edge Function instead
-        console.log(`Email will be sent through Supabase Edge Function for: ${job.email}`);
+        // Send notification to Slack (optional)
         // await slackNotifier.sendToSlack(job.name, job.email, job.domain, emailDraft, websiteData);
         
-        // Update job as completed
-        await jobStore.completeJobWithEmail(jobId, emailDraft);
+        // Generate a magic link for the user
+        console.log(`Generating magic link for: ${job.email}`);
+        const { data: { properties }, error: linkError } = await supabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email: job.email,
+          options: {
+            redirectTo: `${process.env.PUBLIC_URL || 'http://localhost:3000'}/dashboard`
+          }
+        });
+        
+        if (linkError) {
+          console.error(`Error generating magic link: ${linkError.message}`);
+          throw linkError;
+        }
+        
+        // Extract the sign-in link from the properties
+        const signInLink = properties.action_link;
+        console.log(`Magic link generated for ${job.email}`);
+        
+        // Send the email with the AI content and magic link using Resend
+        console.log(`Sending email via Resend for: ${job.email}`);
+        const emailResult = await emailService.sendJobCompletionEmail(job, emailDraft, signInLink);
+        
+        // Update job as completed with email sent flag
+        await jobStore.completeJobWithEmail(jobId, emailDraft, true); // true indicates email was sent
         
         return {
           status: 'completed',
@@ -219,16 +242,82 @@ async function checkJobStatus(jobId) {
 
 /**
  * Get jobs by status
- * @param {string} status - Status to filter by
- * @param {number} limit - Maximum number of jobs to return
- * @returns {Array} Array of jobs with the specified status
+ * @param {string} status - Job status to filter by
+ * @returns {Array} List of jobs with the specified status
  */
-async function getJobsByStatus(status, limit = 20) {
+async function getJobsByStatus(status) {
   try {
-    return await jobStore.getJobsByStatus(status, limit);
+    return await jobStore.getJobsByStatus(status);
   } catch (error) {
     console.error(`Error getting jobs with status ${status}:`, error);
-    throw error;
+    return [];
+  }
+}
+
+/**
+ * Process completed jobs that need emails sent
+ * This function finds jobs that are completed but haven't had emails sent yet,
+ * generates magic links, and sends emails using the Resend service.
+ * @returns {Object} Processing results
+ */
+async function processCompletedJobs() {
+  try {
+    console.log('[EmailProcessor] Processing completed jobs that need emails...');
+    
+    // Get jobs that are completed but don't have emails sent yet
+    const jobs = await jobStore.getJobsByStatusAndEmailSent('completed', false);
+    
+    if (!jobs || jobs.length === 0) {
+      console.log('[EmailProcessor] No completed jobs waiting for emails');
+      return { processed: 0 };
+    }
+    
+    console.log(`[EmailProcessor] Found ${jobs.length} completed jobs needing emails`);
+    let successCount = 0;
+    
+    for (const job of jobs) {
+      try {
+        // Generate a magic link for the user
+        console.log(`Generating magic link for: ${job.email}`);
+        const { data: { properties }, error: linkError } = await supabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email: job.email,
+          options: {
+            redirectTo: `${process.env.PUBLIC_URL || 'http://localhost:3000'}/dashboard`
+          }
+        });
+        
+        if (linkError) {
+          console.error(`Error generating magic link: ${linkError.message}`);
+          continue;
+        }
+        
+        // Extract the sign-in link from the properties
+        const signInLink = properties.action_link;
+        console.log(`Magic link generated for ${job.email}`);
+        
+        // Send the email with the AI content and magic link using Resend
+        console.log(`Sending email via Resend for: ${job.email}`);
+        await emailService.sendJobCompletionEmail(job, JSON.parse(job.email_content), signInLink);
+        
+        // Update job to mark email as sent
+        await jobStore.updateJob(job.id, { email_sent: true });
+        
+        successCount++;
+        console.log(`[EmailProcessor] Successfully sent email for job ${job.id}`);
+      } catch (jobError) {
+        console.error(`[EmailProcessor] Error processing job ${job.id}:`, jobError);
+      }
+    }
+    
+    return { 
+      processed: jobs.length,
+      success: successCount,
+      failed: jobs.length - successCount
+    };
+  } catch (error) {
+    console.error('[EmailProcessor] Error processing completed jobs:', error);
+    return { processed: 0, error: error.message };
   }
 }
 

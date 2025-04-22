@@ -326,4 +326,22 @@ router.post('/job/:jobId/retry', async (req, res) => {
   }
 });
 
+// Process completed jobs that need emails sent
+router.post('/process-emails', validateApiKey, async (req, res) => {
+  try {
+    console.log('[API] Processing completed jobs that need emails sent');
+    
+    // Process completed jobs
+    const result = await emailProcessor.processCompletedJobs();
+    
+    return res.status(200).json({
+      message: 'Processed completed jobs',
+      ...result
+    });
+  } catch (error) {
+    console.error('Error processing completed jobs:', error);
+    return res.status(500).json({ error: 'Error processing completed jobs' });
+  }
+});
+
 module.exports = router;
