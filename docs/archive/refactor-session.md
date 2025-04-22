@@ -21,7 +21,6 @@ This document outlines the high-level steps and rationale for refactoring the Su
 3. **Consistent Protected Route Checks:** Always check authentication state after the session is established.
 4. **Clean URL Handling:** Remove sensitive tokens from the URL after processing for better security and UX.
 
----
 
 ## High-Level Steps
 
