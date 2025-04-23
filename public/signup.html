@@ -344,6 +344,16 @@
                     // Show success message
                     showStatus('Account created! Please check your email for verification instructions.', 'success');
                     
+                    // Store session data in localStorage for persistence
+                    if (signUpResult.data && signUpResult.data.session) {
+                        console.log('Storing session data for persistence');
+                        localStorage.setItem('supabase.auth.token', JSON.stringify({
+                            access_token: signUpResult.data.session.access_token,
+                            refresh_token: signUpResult.data.session.refresh_token,
+                            expires_at: Math.floor(Date.now() / 1000) + signUpResult.data.session.expires_in
+                        }));
+                    }
+                    
                     // Clear form
                     if (!urlParams.has('email')) {
                         signupForm.reset();

@@ -27,7 +27,15 @@ app.set('trust proxy', 1);
 
 // Middleware
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser(process.env.COOKIE_SECRET || 'agent-smith-secret'));
+
+// Debug middleware to log cookies
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[SERVER] Request cookies:', Object.keys(req.cookies || {}));
+  }
+  next();
+});
 
 // Add Content-Security-Policy headers
 app.use((req, res, next) => {

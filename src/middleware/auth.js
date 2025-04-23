@@ -76,9 +76,13 @@ async function authMiddleware(req, res, next) {
  * @returns {string|null} JWT token or null if not found
  */
 function extractJWT(req) {
+  // Debug: Log all cookies
+  console.log('[AUTH] Available cookies:', Object.keys(req.cookies || {}));
+  
   // Check Authorization header first
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
+    console.log('[AUTH] Found JWT in Authorization header');
     return authHeader.substring(7);
   }
   
@@ -86,24 +90,46 @@ function extractJWT(req) {
   if (req.cookies) {
     // Direct access token cookie
     if (req.cookies['sb-access-token']) {
+      console.log('[AUTH] Found JWT in sb-access-token cookie');
       return req.cookies['sb-access-token'];
     }
     
     // Check for project-specific cookie format
     const projectRef = 'jnpdszffuosiirapfvwp'; // Your Supabase project reference
-    if (req.cookies[`sb-${projectRef}-auth-token`]) {
+    const cookieName = `sb-${projectRef}-auth-token`;
+    console.log('[AUTH] Checking for cookie:', cookieName);
+    
+    if (req.cookies[cookieName]) {
+      console.log('[AUTH] Found project-specific cookie');
       try {
         // This cookie contains a JSON with session data
-        const sessionData = JSON.parse(req.cookies[`sb-${projectRef}-auth-token`]);
+        const sessionData = JSON.parse(req.cookies[cookieName]);
+        console.log('[AUTH] Cookie data keys:', Object.keys(sessionData || {}));
         if (sessionData && sessionData.access_token) {
+          console.log('[AUTH] Successfully extracted access_token from cookie');
           return sessionData.access_token;
         }
       } catch (e) {
         console.error('[AUTH] Error parsing Supabase cookie:', e);
       }
     }
+    
+    // Last resort: check for any cookie that might contain auth data
+    for (const key in req.cookies) {
+      if (key.startsWith('sb-') && key.includes('auth')) {
+        console.log('[AUTH] Found potential Supabase auth cookie:', key);
+        try {
+          const data = JSON.parse(req.cookies[key]);
+          if (data && data.access_token) {
+            console.log('[AUTH] Extracted access_token from alternative cookie');
+            return data.access_token;
+          }
+        } catch (e) {}
+      }
+    }
   }
   
+  console.log('[AUTH] No JWT found in request');
   return null;
 }
 
