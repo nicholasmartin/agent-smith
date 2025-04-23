@@ -239,7 +239,9 @@ async function getJobById(jobId) {
         scrape_result,
         scrape_job_id,
         company_id,
-        user_id
+        user_id,
+        from_website,
+        api_key_id
       `)
       .eq('id', jobId)
       .single();
