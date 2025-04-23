@@ -114,7 +114,9 @@ async function handleSupabaseSession() {
     }
     return;
   }
-  
+
+  let processedHash = false; // Flag to track if we handled hash parameters
+
   try {
     // Log session handling start
     console.log('[SESSION] Checking authentication state...');
@@ -130,7 +132,7 @@ async function handleSupabaseSession() {
         level: 'info'
       });
     }
-    
+
     // Check for hash parameters (magic link authentication)
     if (window.location.hash) {
       console.log('[SESSION] URL hash detected:', window.location.hash);
@@ -140,36 +142,25 @@ async function handleSupabaseSession() {
       const hasAuthParams = hashParams.has('access_token') || hashParams.has('refresh_token') || hashParams.has('type');
       
       if (hasAuthParams) {
-        console.log('[SESSION] Auth parameters detected in hash');
+        console.log('[SESSION] Auth parameters detected in hash. Supabase client will process them.');
         if (window.Sentry) {
           Sentry.addBreadcrumb({
             category: 'auth',
-            message: 'Auth parameters detected in hash',
+            message: 'Auth parameters detected in hash, letting Supabase client handle.',
             level: 'info'
           });
         }
-        
-        // If we're not already on the callback route, redirect to it
-        if (window.location.pathname !== '/auth/callback') {
-          console.log('[SESSION] Redirecting to callback handler with auth params');
-          
-          // Preserve the current path to redirect back after auth
-          const currentPath = window.location.pathname;
-          const redirectTo = currentPath !== '/login' ? currentPath : '/dashboard';
-          
-          // Build callback URL with auth parameters and redirect_to
-          const callbackUrl = `/auth/callback?${window.location.hash.substring(1)}&redirect_to=${encodeURIComponent(redirectTo)}`;
-          window.location.href = callbackUrl;
-          return;
-        }
+        processedHash = true;
+        // *** REMOVED the unnecessary redirect to /auth/callback ***
+        // The Supabase JS client automatically handles the hash parameters.
       }
     }
     
-    // Give Supabase time to establish the session
+    // Give Supabase time to establish the session from hash or storage
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // Check current session state
-    console.log('[SESSION] Checking session state');
+    console.log('[SESSION] Checking session state after delay');
     const { data: { session }, error } = await window.supabase.auth.getSession();
     
     if (error) {
@@ -192,20 +183,40 @@ async function handleSupabaseSession() {
       });
     }
     
-    // Clean up URL after authentication by removing hash fragments
-    if (window.location.hash && session) {
-      // Only clean up if we have both a hash and a session
+    // Clean up URL and redirect if we just processed hash parameters and got a session
+    if (processedHash && session) {
+      console.log('[SESSION] Cleaning up URL and redirecting to dashboard after hash processing.');
       const cleanUrl = window.location.href.split('#')[0];
       window.history.replaceState({}, document.title, cleanUrl);
-      console.log('[SESSION] Cleaned up URL after authentication');
+      window.location.href = '/dashboard'; // Redirect to dashboard
+      return; // Stop further execution in this function after redirect
     }
-  } catch (err) {
-    console.error('[SESSION] Error in session handler:', err);
+
+    // Optional: Handle case where user is already logged in but lands on login page
+    if (session && window.location.pathname === '/login.html') {
+       console.log('[SESSION] User already logged in, redirecting from login page to dashboard.');
+       window.location.href = '/dashboard';
+       return;
+    }
+
+    // Server-side middleware should handle protecting routes now, but keep client-side check as fallback
+    // if (!session && isProtectedRoute(window.location.pathname)) {
+    //    console.log('[SESSION] No session on protected route, redirecting to login.');
+    //    window.location.href = '/login.html';
+    //    return;
+    // }
+
+  } catch (error) {
+    console.error('[SESSION] Error during session handling:', error);
     if (window.Sentry) {
-      Sentry.captureException(err, {
+      Sentry.captureException(error, {
         tags: { component: 'session_handler' }
       });
     }
+    // Potentially redirect to an error page or login page
+    // if (!window.location.pathname.includes('login')) {
+    //   window.location.href = '/login.html';
+    // }
   }
 }
 
