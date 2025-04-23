@@ -34,15 +34,32 @@ async function authMiddleware(req, res, next) {
     // Create Supabase client
     const supabase = initSupabase();
     
-    // Attach to request for use in route handlers
-    req.supabase = supabase;
-    
     // Get JWT from Authorization header or cookies
     const jwt = extractJWT(req);
     
+    // If we have a JWT, create a client with the session
     if (jwt) {
-      // Set auth JWT for this request if available
-      supabase.auth.setAuth(jwt);
+      // In newer Supabase versions, we don't use setAuth anymore
+      // Instead, we create a new client with the session
+      req.supabase = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+            // Set the JWT as the session
+            global: {
+              headers: {
+                Authorization: `Bearer ${jwt}`
+              }
+            }
+          }
+        }
+      );
+    } else {
+      // No JWT, just use the default client
+      req.supabase = supabase;
     }
     
     // Process continues - auth check happens in protected route middleware
