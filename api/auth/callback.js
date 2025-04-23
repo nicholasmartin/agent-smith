@@ -10,12 +10,12 @@
  * and token consumption.
  */
 
-const { createServerSupabaseClient } = require('@supabase/auth-helpers-nextjs');
+const { createPagesServerClient } = require('@supabase/auth-helpers-nextjs');
 
 module.exports = async (req, res) => {
   try {
     console.log('[AUTH] Processing auth callback request');
-    const supabase = createServerSupabaseClient({ req, res });
+    const supabase = createPagesServerClient({ req, res });
     
     // Log the query parameters for debugging (excluding sensitive data)
     const queryParams = { ...req.query };

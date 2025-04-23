@@ -6,21 +6,28 @@
  * The protected route middleware checks if the user is authenticated and redirects to login if not.
  */
 
-const { createServerSupabaseClient } = require('@supabase/auth-helpers-nextjs');
+const { createClient } = require('@supabase/supabase-js');
+const { createPagesServerClient } = require('@supabase/auth-helpers-nextjs');
 
 /**
  * Main authentication middleware that initializes the Supabase client
  * and attaches it to the request object for use in route handlers
  */
-function authMiddleware(req, res, next) {
-  // Create Supabase client with request context
-  const supabase = createServerSupabaseClient({ req, res });
-  
-  // Attach to request for use in route handlers
-  req.supabase = supabase;
-  
-  // Process continues - auth check happens in protected route middleware
-  next();
+async function authMiddleware(req, res, next) {
+  try {
+    // Create Supabase client with request context
+    const supabase = createPagesServerClient({ req, res });
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    // Attach to request for use in route handlers
+    req.supabase = supabase;
+    
+    // Process continues - auth check happens in protected route middleware
+    next();
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    res.redirect('/login');
+  }
 }
 
 /**
