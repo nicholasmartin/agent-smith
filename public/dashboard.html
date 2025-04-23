@@ -23,8 +23,12 @@
   <!-- Sentry Error Tracking - Load before other scripts -->
   <script src="js/sentry-client.js"></script>
   
-  <!-- Supabase -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- Supabase - Load specific version for compatibility -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+  <script>
+    // Ensure the global supabase object is available
+    window.supabase = window.supabase || {};
+  </script>
   <script src="js/supabase-client.js"></script>
   
   <!-- Authentication Utilities - Load before dashboard.js -->

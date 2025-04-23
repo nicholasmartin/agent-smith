@@ -22,14 +22,24 @@ function initSupabase() {
     }
     
     // Create and return the Supabase client
-    // When using the CDN version, the global object is named 'supabase'
-    if (typeof supabase === 'undefined') {
-      console.error('Supabase library not loaded');
-      return null;
-    }
-    
     console.log('[AUTH] Creating Supabase client with URL:', supabaseUrl);
-    const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    
+    // Check which version of Supabase is loaded
+    let client;
+    if (typeof supabase !== 'undefined' && typeof supabase.createClient === 'function') {
+      // Direct global supabase object with createClient method
+      client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    } else if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+      // Window-scoped supabase object
+      client = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    } else if (typeof window.supabaseJs !== 'undefined') {
+      // Legacy naming
+      client = window.supabaseJs.createClient(supabaseUrl, supabaseAnonKey);
+    } else {
+      // Try to use the @supabase/supabase-js module if available
+      console.log('[AUTH] Trying to use @supabase/supabase-js module');
+      client = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    }
     
     // Add helper methods to the client
     enhanceClient(client);
