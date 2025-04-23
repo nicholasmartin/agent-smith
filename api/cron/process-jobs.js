@@ -10,7 +10,7 @@ const emailDelivery = require('../../src/emailDelivery');
 /**
  * Process a batch of pending jobs
  */
-async function processJobs() {
+async function processJobs(req, res) {
   try {
     console.log('Cron job started: processing pending jobs');
     
@@ -41,6 +41,8 @@ async function processJobs() {
           
           if (updatedJob.retry_count >= 3) {
             await jobStore.markJobAsFailed(job.id, error.message);
+            // Remove Slack notification for failures
+            // await slackNotifier.sendScrapingFailureToSlack(job.domain, error.message);
             console.log(`[Cron] Job ${job.id} for ${job.domain} failed after ${updatedJob.retry_count} retries: ${error.message}`);
             
             results.push({

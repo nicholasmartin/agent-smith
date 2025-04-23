@@ -24,17 +24,35 @@ async function sendJobCompletionEmail(job, emailContent, requiresAuth = false) {
     
     // Only generate magic link for website submissions that require authentication
     let signInLink = null;
+    
+    // MAGIC_LINK_DEBUG: Log detailed information about the job and auth requirements
+    console.log(`MAGIC_LINK_DEBUG: Job details - ID: ${job.id}, Email: ${job.email}, Name: ${job.name}`);
+    console.log(`MAGIC_LINK_DEBUG: Auth flags - from_website: ${job.from_website}, requiresAuth: ${requiresAuth}`);
+    console.log(`MAGIC_LINK_DEBUG: User ID in job: ${job.user_id || 'not set'}`);
+    
     if (requiresAuth) {
+      console.log(`MAGIC_LINK_DEBUG: Will attempt to generate magic link for ${job.email}`);
       try {
         console.log(`[EmailDelivery] Generating magic link for: ${job.email}`);
+        
+        // Verify required parameters are present
+        if (!job.email || !job.name) {
+          throw new Error(`Missing required parameters: email=${job.email}, name=${job.name}`);
+        }
+        
         signInLink = await magicLinkGenerator.generateMagicLink(job.email, job.name, {
           source: 'agent_smith_email_delivery'
         });
+        
+        console.log(`MAGIC_LINK_DEBUG: Magic link generation returned: ${signInLink ? 'SUCCESS' : 'NULL'}`);
         console.log(`[EmailDelivery] Magic link generated successfully for ${job.email}`);
       } catch (linkError) {
+        console.error(`MAGIC_LINK_DEBUG: ERROR generating magic link: ${linkError.message}`);
         console.error(`[EmailDelivery] Error generating magic link: ${linkError.message}`);
         // Continue without auth link if generation fails
       }
+    } else {
+      console.log(`MAGIC_LINK_DEBUG: Skipping magic link generation because requiresAuth=${requiresAuth}`);
     }
     
     // Send the email with content and optional magic link
