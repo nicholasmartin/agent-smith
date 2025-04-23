@@ -238,7 +238,12 @@ async function getJobById(jobId) {
         updated_at,
         completed_at,
         scrape_result,
-        scrape_job_id
+        scrape_job_id,
+        company_id,
+        user_id,
+        invitation_pending,
+        email_sent,
+        retry_count
       `)
       .eq('id', jobId)
       .single();
