@@ -31,35 +31,35 @@ function initSupabase() {
  */
 async function authMiddleware(req, res, next) {
   try {
-    // Create Supabase client
-    const supabase = initSupabase();
-    
     // Get JWT from Authorization header or cookies
     const jwt = extractJWT(req);
     
-    // If we have a JWT, create a client with the session
     if (jwt) {
-      // In newer Supabase versions, we don't use setAuth anymore
-      // Instead, we create a new client with the session
+      console.log('[AUTH] Creating Supabase client with JWT');
+      // Create a client with the JWT
       req.supabase = createClient(
         process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        process.env.SUPABASE_ANON_KEY, // Use the anon key for authenticated requests
         {
           auth: {
             autoRefreshToken: false,
             persistSession: false,
-            // Set the JWT as the session
-            global: {
-              headers: {
-                Authorization: `Bearer ${jwt}`
-              }
+            detectSessionInUrl: false // Don't look for the session in the URL
+          },
+          global: {
+            headers: {
+              Authorization: `Bearer ${jwt}`
             }
           }
         }
       );
     } else {
-      // No JWT, just use the default client
-      req.supabase = supabase;
+      console.log('[AUTH] Creating Supabase client with service role');
+      // No JWT, use the service role client
+      req.supabase = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
     }
     
     // Process continues - auth check happens in protected route middleware
@@ -151,16 +151,28 @@ async function protectedRouteMiddleware(req, res, next) {
     }
     
     // Get user from Supabase
-    const { data: { user }, error } = await req.supabase.auth.getUser();
+    const { data, error } = await req.supabase.auth.getUser();
     
-    if (error || !user) {
-      console.log('[AUTH] User not authenticated, redirecting to login');
+    // Debug the response
+    console.log('[AUTH] Supabase auth.getUser response:', { 
+      hasData: !!data, 
+      hasUser: !!(data && data.user),
+      error: error ? error.message : null 
+    });
+    
+    if (error) {
+      console.log('[AUTH] Authentication error:', error.message);
+      return res.redirect('/login.html');
+    }
+    
+    if (!data || !data.user) {
+      console.log('[AUTH] No user data returned');
       return res.redirect('/login.html');
     }
     
     // User is authenticated, attach to request and continue
-    console.log('[AUTH] User authenticated successfully:', user.email);
-    req.user = user;
+    console.log('[AUTH] User authenticated successfully:', data.user.email);
+    req.user = data.user;
     next();
   } catch (error) {
     console.error('[AUTH] Protected route middleware error:', error);
