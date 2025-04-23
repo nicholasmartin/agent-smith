@@ -5,13 +5,8 @@
  * ensuring consistent parameters and preventing duplicate token generation.
  */
 
-const { createClient } = require('@supabase/supabase-js');
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Use the already initialized Supabase client
+const supabase = require('../supabaseClient');
 
 /**
  * Generate a magic link for a user
