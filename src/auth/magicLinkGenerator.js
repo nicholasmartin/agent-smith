@@ -25,7 +25,8 @@ async function generateMagicLink(email, name, options = {}) {
     type: 'magiclink',
     email: email,
     options: {
-      redirectTo: 'https://agent-smith.magloft.com/dashboard',
+      // Use the auth callback endpoint to properly handle the authentication flow
+      redirectTo: 'https://agent-smith.magloft.com/api/auth/callback?redirect_to=/dashboard',
       data: {
         name: name,
         source: options.source || 'agent_smith'
