@@ -146,16 +146,41 @@
                         refresh_token: refreshToken
                     });
                     
+                    // Set cookies for server-side authentication
+                    // We need to make a request to our server to set the cookies
+                    try {
+                        // Make a request to a special endpoint that will set the cookies
+                        const response = await fetch('/api/set-auth-cookie', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                access_token: accessToken,
+                                refresh_token: refreshToken
+                            }),
+                            credentials: 'include' // Important for cookies
+                        });
+                        
+                        if (!response.ok) {
+                            console.error('Failed to set auth cookies:', await response.text());
+                        } else {
+                            console.log('Auth cookies set successfully');
+                        }
+                    } catch (cookieError) {
+                        console.error('Error setting auth cookies:', cookieError);
+                    }
+                    
                     // Show success message
                     statusElement.innerHTML = `
                         <p>Your email has been verified successfully!</p>
                         <a href="/dashboard" class="button">Continue to Dashboard</a>
                     `;
                     
-                    // Redirect after a short delay
+                    // Redirect after a short delay to allow cookies to be set
                     setTimeout(() => {
                         window.location.href = '/dashboard';
-                    }, 2000);
+                    }, 3000);
                     
                     return;
                 }

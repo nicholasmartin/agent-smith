@@ -30,6 +30,56 @@ router.get('/form-config', (req, res) => {
   });
 });
 
+// Set auth cookie endpoint - sets authentication cookies from Supabase tokens
+router.post('/set-auth-cookie', (req, res) => {
+  try {
+    const { access_token, refresh_token } = req.body;
+    
+    if (!access_token) {
+      return res.status(400).json({ error: 'Missing access_token' });
+    }
+    
+    // Set the access token as a cookie
+    res.cookie('sb-access-token', access_token, {
+      maxAge: 3600 * 1000, // 1 hour
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' // Important for auth redirects
+    });
+    
+    // Set the refresh token as a cookie if provided
+    if (refresh_token) {
+      res.cookie('sb-refresh-token', refresh_token, {
+        maxAge: 30 * 24 * 3600 * 1000, // 30 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
+    }
+    
+    // Also set the Supabase-specific cookie format
+    const projectRef = 'jnpdszffuosiirapfvwp';
+    const cookieName = `sb-${projectRef}-auth-token`;
+    const sessionData = JSON.stringify({
+      access_token,
+      refresh_token
+    });
+    
+    res.cookie(cookieName, sessionData, {
+      maxAge: 3600 * 1000, // 1 hour
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+    
+    console.log('[AUTH] Set auth cookies successfully');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[AUTH] Error setting auth cookies:', error);
+    res.status(500).json({ error: 'Failed to set auth cookies' });
+  }
+});
+
 // Website form submission endpoint with special protection
 router.post('/website-signup', validateWebsiteSecret, async (req, res) => {
   console.log(`[Server] ENTER /api/website-signup handler. Request ID (if available): ${req.headers['x-vercel-id'] || 'N/A'}`); // Log entry
