@@ -115,6 +115,67 @@ router.get('/debug-env', (req, res) => {
   }
 });
 
+// Debug endpoint to check authentication status
+router.get('/debug-auth', async (req, res) => {
+  try {
+    console.log('[DEBUG] Checking server-side authentication');
+    console.log('[DEBUG] Available cookies:', Object.keys(req.cookies || {}));
+    
+    // Extract JWT from request
+    const jwt = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.substring(7)
+      : req.cookies['sb-access-token'] || null;
+    
+    if (!jwt) {
+      console.log('[DEBUG] No JWT found in request');
+      return res.json({
+        authenticated: false,
+        message: 'No JWT token found',
+        cookies: Object.keys(req.cookies || {})
+      });
+    }
+    
+    // Check authentication with Supabase
+    const { data, error } = await req.supabase.auth.getUser();
+    
+    if (error) {
+      console.log('[DEBUG] Authentication error:', error.message);
+      return res.json({
+        authenticated: false,
+        message: error.message,
+        error: error.message
+      });
+    }
+    
+    if (!data || !data.user) {
+      console.log('[DEBUG] No user data returned');
+      return res.json({
+        authenticated: false,
+        message: 'No user data returned',
+        data
+      });
+    }
+    
+    // User is authenticated
+    console.log('[DEBUG] User authenticated successfully:', data.user.email);
+    return res.json({
+      authenticated: true,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        created_at: data.user.created_at
+      }
+    });
+  } catch (error) {
+    console.error('[DEBUG] Error checking authentication:', error);
+    res.status(500).json({
+      authenticated: false,
+      message: 'Server error checking authentication',
+      error: error.message
+    });
+  }
+});
+
 // Website form submission endpoint with special protection
 router.post('/website-signup', validateWebsiteSecret, async (req, res) => {
   console.log(`[Server] ENTER /api/website-signup handler. Request ID (if available): ${req.headers['x-vercel-id'] || 'N/A'}`); // Log entry

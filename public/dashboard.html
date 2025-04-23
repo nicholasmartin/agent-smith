@@ -30,6 +30,46 @@
   <!-- Authentication Utilities - Load before dashboard.js -->
   <script src="js/auth.js"></script>
   
+  <!-- Authentication Debug Script -->
+  <script>
+    // Immediately check authentication status on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('[DEBUG] Dashboard page loaded, checking authentication...');
+      
+      // Initialize Supabase client
+      window.supabase = initSupabase();
+      
+      if (!window.supabase) {
+        console.error('[DEBUG] Failed to initialize Supabase client');
+        return;
+      }
+      
+      try {
+        // Check for session
+        const { data: { session }, error } = await window.supabase.auth.getSession();
+        console.log('[DEBUG] Session check result:', { 
+          hasSession: !!session, 
+          error: error ? error.message : null 
+        });
+        
+        if (session) {
+          console.log('[DEBUG] User is authenticated, session found');
+          // Get user details
+          const { data: { user }, error: userError } = await window.supabase.auth.getUser();
+          console.log('[DEBUG] User data:', { 
+            hasUser: !!user, 
+            email: user ? user.email : null,
+            error: userError ? userError.message : null 
+          });
+        } else {
+          console.warn('[DEBUG] No session found, user might be redirected');
+        }
+      } catch (e) {
+        console.error('[DEBUG] Error checking authentication:', e);
+      }
+    });
+  </script>
+  
   <!-- Dashboard Routing -->
   <script src="js/dashboard.js"></script>
 </head>

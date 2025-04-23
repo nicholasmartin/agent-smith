@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth Debug | Agent Smith</title>
+  <meta name="supabase-url" content="https://jnpdszffuosiirapfvwp.supabase.co">
+  <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MTYxNTMsImV4cCI6MjA1OTM5MjE1M30._y12tD3iyz2g6IuUbokPPNM6_3SfcnkbCnJP0CGeef4">
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    .section {
+      margin-bottom: 30px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Auth Debug Page</h1>
+  <p>This page helps diagnose authentication issues with Agent Smith.</p>
+
+  <div class="section">
+    <h2>Authentication Status</h2>
+    <div id="auth-status">Checking authentication status...</div>
+    <div id="user-info"></div>
+    <button id="check-auth">Check Auth Status</button>
+    <button id="check-cookies">Check Cookies</button>
+  </div>
+
+  <div class="section">
+    <h2>Server-Side Auth Check</h2>
+    <div id="server-auth-status">Not checked yet</div>
+    <button id="check-server-auth">Check Server Auth</button>
+  </div>
+
+  <div class="section">
+    <h2>Manual Actions</h2>
+    <button id="goto-dashboard">Go to Dashboard</button>
+    <button id="goto-login">Go to Login</button>
+    <button id="sign-out">Sign Out</button>
+  </div>
+
+  <div class="section">
+    <h2>Debug Log</h2>
+    <pre id="debug-log"></pre>
+  </div>
+
+  <script>
+    // Initialize debug log
+    const debugLog = document.getElementById('debug-log');
+    function log(message, data = null) {
+      const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      let logMessage = `[${timestamp}] ${message}`;
+      if (data) {
+        logMessage += '\n' + JSON.stringify(data, null, 2);
+      }
+      debugLog.textContent = logMessage + '\n\n' + debugLog.textContent;
+      console.log(message, data);
+    }
+
+    // Initialize Supabase
+    let supabase;
+    try {
+      const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
+      const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
+      supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+      log('Supabase client initialized', { url: supabaseUrl });
+    } catch (error) {
+      log('Error initializing Supabase client', error);
+    }
+
+    // Check authentication status
+    async function checkAuth() {
+      const authStatus = document.getElementById('auth-status');
+      const userInfo = document.getElementById('user-info');
+      
+      try {
+        log('Checking authentication status...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          log('Error getting session', error);
+          authStatus.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+          return;
+        }
+        
+        if (session) {
+          log('Session found', { 
+            access_token: session.access_token ? session.access_token.substring(0, 10) + '...' : null,
+            expires_at: session.expires_at,
+            user_id: session.user?.id
+          });
+          
+          authStatus.innerHTML = `<span class="success">Authenticated</span>`;
+          
+          // Get user details
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          
+          if (userError) {
+            log('Error getting user', userError);
+            userInfo.innerHTML = `<p class="error">Error getting user: ${userError.message}</p>`;
+          } else if (user) {
+            log('User found', { 
+              id: user.id,
+              email: user.email,
+              email_confirmed_at: user.email_confirmed_at,
+              created_at: user.created_at
+            });
+            
+            userInfo.innerHTML = `
+              <p><strong>User ID:</strong> ${user.id}</p>
+              <p><strong>Email:</strong> ${user.email}</p>
+              <p><strong>Email Confirmed:</strong> ${user.email_confirmed_at ? 'Yes' : 'No'}</p>
+              <p><strong>Created At:</strong> ${new Date(user.created_at).toLocaleString()}</p>
+            `;
+          } else {
+            log('No user found despite having a session');
+            userInfo.innerHTML = `<p class="error">No user found despite having a session</p>`;
+          }
+        } else {
+          log('No session found');
+          authStatus.innerHTML = `<span class="error">Not authenticated</span>`;
+          userInfo.innerHTML = '';
+        }
+      } catch (e) {
+        log('Exception checking auth', e);
+        authStatus.innerHTML = `<span class="error">Error: ${e.message}</span>`;
+      }
+    }
+
+    // Check cookies
+    function checkCookies() {
+      log('Checking cookies...');
+      const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+      log('Cookies found', cookies);
+      
+      // Look for Supabase cookies
+      const supabaseCookies = cookies.filter(cookie => 
+        cookie.startsWith('sb-') || 
+        cookie.includes('supabase')
+      );
+      
+      log('Supabase cookies', supabaseCookies);
+    }
+
+    // Check server-side auth
+    async function checkServerAuth() {
+      const serverAuthStatus = document.getElementById('server-auth-status');
+      serverAuthStatus.textContent = 'Checking server auth...';
+      
+      try {
+        log('Checking server-side authentication...');
+        const response = await fetch('/api/debug-auth', {
+          credentials: 'include' // Important for cookies
+        });
+        
+        const data = await response.json();
+        log('Server auth response', data);
+        
+        if (data.authenticated) {
+          serverAuthStatus.innerHTML = `<span class="success">Server authenticated: ${data.user?.email || 'Unknown'}</span>`;
+        } else {
+          serverAuthStatus.innerHTML = `<span class="error">Not authenticated on server: ${data.message || 'Unknown reason'}</span>`;
+        }
+      } catch (e) {
+        log('Error checking server auth', e);
+        serverAuthStatus.innerHTML = `<span class="error">Error: ${e.message}</span>`;
+      }
+    }
+
+    // Sign out
+    async function signOut() {
+      try {
+        log('Signing out...');
+        const { error } = await supabase.auth.signOut();
+        
+        if (error) {
+          log('Error signing out', error);
+        } else {
+          log('Signed out successfully');
+          // Refresh auth status
+          checkAuth();
+        }
+      } catch (e) {
+        log('Exception signing out', e);
+      }
+    }
+
+    // Event listeners
+    document.getElementById('check-auth').addEventListener('click', checkAuth);
+    document.getElementById('check-cookies').addEventListener('click', checkCookies);
+    document.getElementById('check-server-auth').addEventListener('click', checkServerAuth);
+    document.getElementById('goto-dashboard').addEventListener('click', () => window.location.href = '/dashboard');
+    document.getElementById('goto-login').addEventListener('click', () => window.location.href = '/login.html');
+    document.getElementById('sign-out').addEventListener('click', signOut);
+
+    // Check auth on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      log('Page loaded');
+      checkAuth();
+      checkCookies();
+    });
+  </script>
+</body>
+</html>
