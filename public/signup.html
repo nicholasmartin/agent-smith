@@ -12,6 +12,7 @@
     
     <!-- Supabase -->  
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
+    <script src="/js/config.js"></script>
     <style>
         :root {
             --brand-color: #4CAF50;
@@ -249,10 +250,15 @@
             const emailInput = document.getElementById('email');
             const passwordInput = document.getElementById('password');
             
-            // Initialize Supabase client directly
-            const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
-            const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
-            const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+            // Initialize Supabase client using the config helper
+            console.log('Initializing Supabase client from config.js');
+            const supabaseClient = window.AGENT_SMITH_CONFIG.getSupabaseClient();
+            
+            if (!supabaseClient) {
+                console.error('Failed to initialize Supabase client');
+                showStatus('Error initializing authentication. Please try again later.', 'error');
+                return;
+            }
             
             // Check if user is already signed in
             supabaseClient.auth.getSession().then(({ data: { session } }) => {
@@ -299,8 +305,22 @@
                 showStatus('Creating your account...', 'info');
                 
                 try {
-                    // Sign up with Supabase
-                    const { data, error } = await supabaseClient.auth.signUp({
+                    console.log('Attempting signup with email:', email);
+                    
+                    // Test the Supabase connection first
+                    try {
+                        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+                        console.log('Session check result:', sessionError ? 'Error' : 'Success', session ? 'Has session' : 'No session');
+                        if (sessionError) {
+                            console.warn('Session check error:', sessionError);
+                        }
+                    } catch (sessionCheckError) {
+                        console.error('Error checking session:', sessionCheckError);
+                    }
+                    
+                    // Sign up with Supabase - with detailed error logging
+                    console.log('Calling auth.signUp...');
+                    const signUpResult = await supabaseClient.auth.signUp({
                         email,
                         password,
                         options: {
@@ -312,7 +332,13 @@
                         }
                     });
                     
-                    if (error) throw error;
+                    console.log('Sign up API call completed');
+                    console.log('Sign up result:', signUpResult.error ? 'Error' : 'Success');
+                    
+                    if (signUpResult.error) {
+                        console.error('Detailed signup error:', signUpResult.error);
+                        throw signUpResult.error;
+                    }
                     
                     // Show success message
                     showStatus('Account created! Please check your email for verification instructions.', 'success');
@@ -323,7 +349,9 @@
                     }
                 } catch (error) {
                     console.error('Error signing up:', error);
-                    showStatus(error.message || 'Error creating account', 'error');
+                    // More detailed error message
+                    const errorDetails = error.message || 'Error creating account';
+                    showStatus(`Error: ${errorDetails}. Please try again or contact support.`, 'error');
                 } finally {
                     signupBtn.disabled = false;
                 }

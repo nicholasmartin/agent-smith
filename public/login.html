@@ -12,6 +12,7 @@
     
     <!-- Supabase -->  
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
+    <script src="/js/config.js"></script>
     <style>
         :root {
             --brand-color: #4CAF50;
@@ -229,10 +230,15 @@
             const loginStatus = document.getElementById('login-status');
             const resetPasswordLink = document.getElementById('reset-password-link');
             
-            // Initialize Supabase client directly
-            const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
-            const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
-            const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+            // Initialize Supabase client using the config helper
+            console.log('Initializing Supabase client from config.js');
+            const supabaseClient = window.AGENT_SMITH_CONFIG.getSupabaseClient();
+            
+            if (!supabaseClient) {
+                console.error('Failed to initialize Supabase client');
+                showStatus('Error initializing authentication. Please try again later.', 'error');
+                return;
+            }
             
             // Check if user is already signed in
             supabaseClient.auth.getSession().then(({ data: { session } }) => {
