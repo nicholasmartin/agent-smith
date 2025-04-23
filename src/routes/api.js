@@ -10,9 +10,25 @@ const emailProcessor = require('../emailProcessor');
 const jobStore = require('../jobStore');
 const processJobs = require('../../api/cron/process-jobs');
 const supabase = require('../supabaseClient');
+const crypto = require('crypto');
 
 // Import middleware
 const { validateApiKey, validateWebsiteSecret } = require('../middleware/validation');
+
+// Form configuration endpoint - provides necessary client-side configuration
+router.get('/form-config', (req, res) => {
+  // Generate a CSRF token for the session if one doesn't exist
+  if (!req.session?.csrfToken) {
+    req.session = req.session || {};
+    req.session.csrfToken = crypto.randomBytes(16).toString('hex');
+  }
+  
+  // Return the configuration
+  res.json({
+    websiteFormSecret: process.env.WEBSITE_FORM_SECRET || '',
+    csrfToken: req.session.csrfToken || ''
+  });
+});
 
 // Website form submission endpoint with special protection
 router.post('/website-signup', validateWebsiteSecret, async (req, res) => {

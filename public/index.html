@@ -567,11 +567,12 @@
 
     <!-- Load our form handlers and authentication scripts -->    
     <script src="/js/config.js"></script> <!-- Load dynamic configuration first -->
+    <script src="/js/form-config.js"></script> <!-- Load form configuration from server -->
     <script>
       // Debug validation for config loading
       window.addEventListener('load', function() {
         console.log('DEBUG: Config loaded:', !!window.AGENT_SMITH_CONFIG);
-        if (!window.AGENT_SMITH_CONFIG || !window.AGENT_SMITH_CONFIG.websiteFormSecret) {
+        if (!window.AGENT_SMITH_CONFIG) {
           console.error('WARNING: Agent Smith config not properly loaded!');
         }
       });
