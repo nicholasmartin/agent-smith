@@ -73,11 +73,18 @@ app.get('/auth-callback.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth-callback.html'));
 });
 
-// Dashboard routes - Apply protectedRouteMiddleware for authentication check
-app.use('/dashboard', protectedRouteMiddleware, dashboardRoutes);
+// Apply protectedRouteMiddleware once for all dashboard routes
+app.use('/dashboard', protectedRouteMiddleware, (req, res, next) => {
+  console.log('[SERVER] User authenticated for dashboard, proceeding to route handlers');
+  next();
+});
 
-// Handle all dashboard paths to serve the dashboard.html file
-app.get('/dashboard*', protectedRouteMiddleware, (req, res) => {
+// Dashboard routes from the dashboard module
+app.use('/dashboard', dashboardRoutes);
+
+// Catch-all handler for any dashboard paths not handled by dashboardRoutes
+app.get('/dashboard*', (req, res) => {
+  console.log('[SERVER] Serving dashboard.html for path:', req.path);
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
