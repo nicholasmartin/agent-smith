@@ -10,6 +10,7 @@ const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
 const express_rate_limit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 
 // Import middleware
 const { authMiddleware } = require('./src/middleware/auth');
@@ -29,6 +30,7 @@ app.set('trust proxy', 1);
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 
 // Add Content-Security-Policy headers
 app.use((req, res, next) => {

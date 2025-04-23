@@ -20,11 +20,36 @@ router.post('/', async (req, res) => {
     const { session, user } = await signInWithPassword(email, password);
     
     // Set the session cookie
-    if (req.supabase) {
-      await req.supabase.auth.setSession({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token
+    if (session) {
+      // Set cookies directly for better compatibility
+      res.cookie('sb-access-token', session.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 3600 * 24 * 7 * 1000 // 1 week
       });
+      
+      res.cookie('sb-refresh-token', session.refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 3600 * 24 * 30 * 1000 // 30 days
+      });
+      
+      // Also try to use the Supabase helper if available
+      if (req.supabase) {
+        try {
+          await req.supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token
+          });
+        } catch (setSessionError) {
+          console.error('[AUTH] Error setting session:', setSessionError);
+          // Continue anyway since we set cookies directly
+        }
+      }
+    } else {
+      console.error('[AUTH] No session returned from signInWithPassword');
     }
     
     res.status(200).json({ success: true, user });
