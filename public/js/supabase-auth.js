@@ -53,65 +53,46 @@ function setupSupabaseSignup() {
     }
     
     // Show loading state
-    showStatus('loading', 'Sending magic link...');
+    showStatus('loading', 'Submitting request...');
     
     try {
-      // Use Supabase's passwordless authentication with magic link
-      // Update to use the new auth callback endpoint
-      const { data, error } = await supabaseClient.auth.signInWithOtp({
-        email: email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?redirect_to=/dashboard`,
-          data: {
-            name: name
-          }
-        }
+      // Submit to the API for job processing (now the primary action)
+      const csrfToken = window.AGENT_SMITH_CONFIG?.csrfToken || '';
+      const response = await fetch('/api/website-signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Website-Secret': window.AGENT_SMITH_CONFIG?.websiteFormSecret || '',
+          'X-CSRF-Token': csrfToken || '',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          email,
+          name
+        })
       });
-      
-      if (error) {
-        throw new Error(error.message || 'Authentication error');
+
+      const data = await response.json();
+
+      // Check if the API request itself failed
+      if (!response.ok) {
+        throw new Error(data.message || `Request failed with status ${response.status}`);
       }
-      
-      // Show success message
-      showStatus('success', 'Magic link sent! Please check your email to continue.');
-      
+
+      // Show success message - adjusted for API submission
+      showStatus('success', 'Request submitted! We will email you shortly.');
+
       // Clear form
       form.reset();
-      
-      // Also submit to the API for job processing (optional)
-      try {
-        const csrfToken = window.AGENT_SMITH_CONFIG?.csrfToken || '';
-        
-        const response = await fetch('/api/website-signup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Website-Secret': window.AGENT_SMITH_CONFIG?.websiteFormSecret || '',
-            'X-CSRF-Token': csrfToken || '',
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: JSON.stringify({
-            email,
-            name
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok && data.jobId) {
-          // Reference to the existing pollJobStatus function
-          if (typeof pollJobStatus === 'function') {
-            pollJobStatus(data.jobId);
-          }
-        }
-      } catch (apiError) {
-        console.error('API submission error:', apiError);
-        // Don't show this error to user since auth was successful
+
+      // Start polling if job ID was returned and function exists
+      if (data.jobId && typeof pollJobStatus === 'function') {
+        pollJobStatus(data.jobId);
       }
       
-    } catch (error) {
-      console.error('Authentication error:', error);
-      showStatus('error', error.message || 'Failed to send magic link. Please try again.');
+    } catch (error) { // Catch errors from validation or API call
+      console.error('Submission error:', error);
+      showStatus('error', error.message || 'Failed to submit request. Please try again.');
     }
   });
 }
