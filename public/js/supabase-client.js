@@ -99,149 +99,85 @@ function enhanceClient(client) {
 // Make Supabase client available globally
 window.supabase = initSupabase();
 
-/**
- * Enhanced Supabase Session Handler
- * Works with server-side auth middleware and properly handles magic links
- */
-async function handleSupabaseSession() {
-  if (!window.supabase) {
-    console.error('[SESSION] Supabase client not available');
-    if (window.Sentry) {
-      Sentry.captureMessage('Supabase client not available', {
-        level: 'error',
-        tags: { component: 'session_handler' }
-      });
+// Use onAuthStateChange for reactive session handling
+if (window.supabase) {
+  // Flag to check if the initial URL had auth hash parameters
+  let initialUrlHadAuthHash = false;
+  if (window.location.hash) {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    initialUrlHadAuthHash = hashParams.has('access_token') || hashParams.has('refresh_token') || hashParams.has('type');
+    if (initialUrlHadAuthHash) {
+       console.log('[AUTH] Initial URL contains auth hash parameters.');
     }
-    return;
   }
 
-  let processedHash = false; // Flag to track if we handled hash parameters
+  window.supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log('[AUTH] onAuthStateChange event:', event, 'Session:', !!session);
 
-  try {
-    // Log session handling start
-    console.log('[SESSION] Checking authentication state...');
-    if (window.Sentry) {
-      Sentry.addBreadcrumb({
-        category: 'auth',
-        message: 'Starting session handling',
-        data: {
-          url: window.location.href,
-          pathname: window.location.pathname,
-          hasHash: !!window.location.hash
-        },
-        level: 'info'
-      });
-    }
+    if (event === 'SIGNED_IN' && session) {
+      console.log('[AUTH] User signed in.');
 
-    // Check for hash parameters (magic link authentication)
-    if (window.location.hash) {
-      console.log('[SESSION] URL hash detected:', window.location.hash);
-      
-      // Parse hash parameters
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const hasAuthParams = hashParams.has('access_token') || hashParams.has('refresh_token') || hashParams.has('type');
-      
-      if (hasAuthParams) {
-        console.log('[SESSION] Auth parameters detected in hash. Supabase client will process them.');
-        if (window.Sentry) {
-          Sentry.addBreadcrumb({
-            category: 'auth',
-            message: 'Auth parameters detected in hash, letting Supabase client handle.',
-            level: 'info'
-          });
-        }
-        processedHash = true;
-        // *** REMOVED the unnecessary redirect to /auth/callback ***
-        // The Supabase JS client automatically handles the hash parameters.
+      // If sign-in happened and the initial URL had the hash, redirect to dashboard
+      if (initialUrlHadAuthHash) {
+        console.log('[AUTH] Redirecting to dashboard after magic link sign-in.');
+        const cleanUrl = window.location.href.split('#')[0];
+        // Use replaceState to clean URL *before* redirecting to avoid history issues
+        window.history.replaceState({}, document.title, cleanUrl);
+        window.location.href = '/dashboard';
+        return; // Prevent further checks after redirect
       }
-    }
-    
-    // Give Supabase time to establish the session from hash or storage
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Check current session state
-    console.log('[SESSION] Checking session state after delay');
-    const { data: { session }, error } = await window.supabase.auth.getSession();
-    
-    if (error) {
-      console.error('[SESSION] Error getting session:', error);
-      if (window.Sentry) {
-        Sentry.captureException(error, {
-          tags: { component: 'session_handler' }
-        });
+      
+      // Handle case where user is already logged in and visits login page
+      if (window.location.pathname === '/login.html') {
+         console.log('[AUTH] User already signed in, redirecting from login page to dashboard.');
+         window.location.href = '/dashboard';
+         return;
       }
-      return;
-    }
-    
-    console.log('[SESSION] Session state:', !!session);
-    if (window.Sentry) {
-      Sentry.addBreadcrumb({
-        category: 'auth',
-        message: 'Session state checked',
-        data: { hasSession: !!session },
-        level: 'info'
-      });
-    }
-    
-    // Clean up URL and redirect if we just processed hash parameters and got a session
-    if (processedHash && session) {
-      console.log('[SESSION] Cleaning up URL and redirecting to dashboard after hash processing.');
-      const cleanUrl = window.location.href.split('#')[0];
-      window.history.replaceState({}, document.title, cleanUrl);
-      window.location.href = '/dashboard'; // Redirect to dashboard
-      return; // Stop further execution in this function after redirect
-    }
 
-    // Optional: Handle case where user is already logged in but lands on login page
-    if (session && window.location.pathname === '/login.html') {
-       console.log('[SESSION] User already logged in, redirecting from login page to dashboard.');
-       window.location.href = '/dashboard';
-       return;
+    } else if (event === 'SIGNED_OUT') {
+      console.log('[AUTH] User signed out.');
+      // Redirect to login if on a protected page after sign out
+      // Note: Server-side middleware is primary protection
+      // if (isProtectedRoute(window.location.pathname)) {
+      //    window.location.href = '/login.html';
+      // }
+    } else if (event === 'INITIAL_SESSION') {
+       console.log('[AUTH] Initial session loaded:', !!session);
+       // Handle case where user has existing session and visits login page
+       if (session && window.location.pathname === '/login.html') {
+          console.log('[AUTH] User has existing session, redirecting from login page to dashboard.');
+          window.location.href = '/dashboard';
+          return;
+       }
     }
-
-    // Server-side middleware should handle protecting routes now, but keep client-side check as fallback
-    // if (!session && isProtectedRoute(window.location.pathname)) {
-    //    console.log('[SESSION] No session on protected route, redirecting to login.');
-    //    window.location.href = '/login.html';
-    //    return;
-    // }
-
-  } catch (error) {
-    console.error('[SESSION] Error during session handling:', error);
-    if (window.Sentry) {
-      Sentry.captureException(error, {
-        tags: { component: 'session_handler' }
-      });
-    }
-    // Potentially redirect to an error page or login page
-    // if (!window.location.pathname.includes('login')) {
-    //   window.location.href = '/login.html';
-    // }
-  }
+    // Add handling for other events like TOKEN_REFRESHED if needed
+  });
+} else {
+  console.error('[AUTH] Supabase client not initialized, cannot set up auth listener.');
 }
 
-// Single event listener for handling authentication and session persistence
-document.addEventListener('DOMContentLoaded', handleSupabaseSession);
-
-// No need for session flags cleanup with server-side auth
-
-// processAuthParameters function has been removed and its functionality consolidated into handleSupabaseSession
-
-// Simplified protected route check function
-// This becomes much simpler as server handles protection
+// Function to check if user is on a protected route - might still be useful for UI elements
 async function checkProtectedRoute() {
-  // No need to do anything - server middleware handles protection
-  console.log('[PROTECT] Route protection handled by server middleware');
+  if (!window.supabase) return;
   
-  if (window.Sentry) {
-    Sentry.addBreadcrumb({
-      category: 'route',
-      message: 'Route protection handled by server middleware',
-      data: { 
-        path: window.location.pathname,
-        url: window.location.href
-      },
-      level: 'info'
-    });
+  // Server-side auth handles redirection, this is just for potential UI logic
+  const { data: { session } } = await window.supabase.auth.getSession();
+  const needsLogin = !session && isProtectedRoute(window.location.pathname);
+
+  if (needsLogin) {
+     console.warn('[AUTH] Client check: No session on protected route.');
+     // Optionally hide/show UI elements, but avoid client-side redirects here
+     // window.location.href = '/login.html'; 
   }
 }
+
+// Helper function still needed for checkProtectedRoute
+function isProtectedRoute(pathname) {
+  const protectedPaths = ['/dashboard', '/api/user/']; // Add other protected paths if needed
+  // Ensure dashboard.html itself is considered protected
+  if (pathname === '/dashboard.html') return true;
+  return protectedPaths.some(path => pathname.startsWith(path));
+}
+
+// Call checkProtectedRoute on DOM load for any initial UI adjustments needed
+document.addEventListener('DOMContentLoaded', checkProtectedRoute);
