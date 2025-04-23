@@ -81,25 +81,45 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         console.log('[AUTH] Attempting to sign in with:', email);
         
-        // Use the server-side login endpoint instead of direct Supabase client
-        const loginResponse = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email, password })
+        // Try direct Supabase client authentication first (client-side)
+        // This is more reliable for maintaining the session in the browser
+        console.log('[AUTH] Attempting direct Supabase client authentication');
+        const { data: authData, error: authError } = await window.supabase.auth.signInWithPassword({
+          email,
+          password
         });
         
-        const loginData = await loginResponse.json();
-        
-        console.log('[AUTH] Login response status:', loginResponse.status);
-        
-        if (!loginResponse.ok) {
-          console.error('[AUTH] Login error:', loginData.error);
-          throw new Error(loginData.error || 'Failed to sign in');
+        if (authError) {
+          console.error('[AUTH] Direct auth error:', authError);
+          // Fall back to server-side login as backup
+          console.log('[AUTH] Falling back to server-side login');
+          
+          const loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+          });
+          
+          const loginData = await loginResponse.json();
+          
+          if (!loginResponse.ok) {
+            console.error('[AUTH] Server login error:', loginData.error);
+            throw new Error(loginData.error || 'Failed to sign in');
+          }
         }
         
-        console.log('[AUTH] User signed in successfully');
+        // Double-check that we have a session
+        const { data: { session } } = await window.supabase.auth.getSession();
+        console.log('[AUTH] Session check after login:', !!session);
+        
+        if (!session) {
+          console.error('[AUTH] No session after authentication attempts');
+          throw new Error('Authentication succeeded but no session was created');
+        }
+        
+        console.log('[AUTH] User signed in successfully with session');
         
         
         // Redirect to dashboard

@@ -13,7 +13,9 @@
     <!-- Sentry Error Tracking - Load before other scripts -->
     <script src="js/sentry-client.js"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase -->  
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="/js/supabase-client.js"></script>
     <style>
         .auth-container {
             max-width: 400px;
@@ -187,7 +189,7 @@
                     loginStatus.textContent = 'Signing in...';
                     loginStatus.className = 'status info';
                     
-                    const { error } = await supabase.auth.signInWithPassword({
+                    const { error } = await window.supabase.auth.signInWithPassword({
                         email,
                         password
                     });
