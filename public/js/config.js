@@ -11,10 +11,14 @@ window.AGENT_SMITH_CONFIG = window.AGENT_SMITH_CONFIG || {};
   // First try to load from meta tags (preferred method)
   const supabaseUrl = document.querySelector('meta[name="supabase-url"]')?.content;
   const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]')?.content;
+  const websiteFormSecret = document.querySelector('meta[name="website-form-secret"]')?.content || 'form-secret-placeholder';
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
   
   // Store in the global config
   window.AGENT_SMITH_CONFIG.supabaseUrl = supabaseUrl;
   window.AGENT_SMITH_CONFIG.supabaseAnonKey = supabaseAnonKey;
+  window.AGENT_SMITH_CONFIG.websiteFormSecret = websiteFormSecret;
+  window.AGENT_SMITH_CONFIG.csrfToken = csrfToken;
   
   // Add a helper method to get the Supabase client
   window.AGENT_SMITH_CONFIG.getSupabaseClient = function() {
