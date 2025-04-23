@@ -6,7 +6,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-// Create a Supabase client with the service role key for admin operations
+// Create an admin client for user management
 const adminSupabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -125,7 +125,14 @@ function generatePasswordCreationLink(email, jobId) {
 async function signInWithPassword(email, password) {
   console.log(`[AUTH] Signing in user: ${email}`);
   
-  const { data, error } = await supabase.auth.signInWithPassword({
+  // Create a public client for auth operations
+  // This is different from the admin client which requires service role key
+  const publicSupabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+  
+  const { data, error } = await publicSupabase.auth.signInWithPassword({
     email,
     password
   });

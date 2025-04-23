@@ -8,7 +8,7 @@ const express = require('express');
 const router = express.Router();
 const { signInWithPassword } = require('../../auth/passwordAuth');
 
-router.post('/login', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { email, password } = req.body;
     

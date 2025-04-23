@@ -79,15 +79,28 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       try {
-        // Sign in the user
-        const { error: signInError } = await window.supabase.auth.signInWithPassword({
-          email,
-          password
+        console.log('[AUTH] Attempting to sign in with:', email);
+        
+        // Use the server-side login endpoint instead of direct Supabase client
+        const loginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
         });
         
-        if (signInError) {
-          throw signInError;
+        const loginData = await loginResponse.json();
+        
+        console.log('[AUTH] Login response status:', loginResponse.status);
+        
+        if (!loginResponse.ok) {
+          console.error('[AUTH] Login error:', loginData.error);
+          throw new Error(loginData.error || 'Failed to sign in');
         }
+        
+        console.log('[AUTH] User signed in successfully');
+        
         
         // Redirect to dashboard
         successMessage.textContent = 'Sign in successful! Redirecting to dashboard...';
