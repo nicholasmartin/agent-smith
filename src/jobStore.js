@@ -133,7 +133,6 @@ async function completeJobWithEmail(jobId, emailDraft, emailSent = false) {
       .from('jobs')
       .update({
         email_draft: emailDraft,
-        email_content: JSON.stringify(emailDraft), // Store as JSON string for easier retrieval
         status: 'completed',
         email_sent: emailSent,
         updated_at: new Date().toISOString(),
