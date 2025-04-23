@@ -20,11 +20,11 @@ const supabase = require('../supabaseClient');
 async function generateMagicLink(email, name, options = {}) {
   console.log(`[AUTH] Generating magic link for: ${email}`);
   
+  // Generate magic link according to Supabase documentation format
   const { data, error } = await supabase.auth.admin.generateLink({
     type: 'magiclink',
     email: email,
     options: {
-      // Use hardcoded production URL to ensure consistency
       redirectTo: 'https://agent-smith.magloft.com/dashboard',
       data: {
         name: name,
@@ -33,14 +33,29 @@ async function generateMagicLink(email, name, options = {}) {
     }
   });
   
+  // Log the full response for debugging
+  console.log(`[AUTH] Magic link generation response:`, JSON.stringify(data, null, 2));
+  
   if (error) {
     console.error(`[AUTH] Error generating magic link: ${error.message}`);
     throw error;
   }
   
-  // Extract the sign-in link from the properties
+  // Extract the sign-in link from the response
+  // The Supabase API returns the link in data.properties.action_link
+  if (!data || !data.properties || !data.properties.action_link) {
+    console.error(`[AUTH] Magic link generation failed: Invalid response structure`, data);
+    throw new Error('Invalid magic link response structure');
+  }
+  
   const signInLink = data.properties.action_link;
-  console.log(`[AUTH] Magic link generated successfully for ${email}`);
+  console.log(`[AUTH] Magic link generated successfully for ${email}: ${signInLink}`);
+  
+  // Verify the link is not null or undefined
+  if (!signInLink) {
+    console.error(`[AUTH] Magic link is null or undefined`);
+    throw new Error('Magic link is null or undefined');
+  }
   
   return signInLink;
 }
