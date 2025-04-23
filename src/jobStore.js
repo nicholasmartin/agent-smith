@@ -232,6 +232,7 @@ async function getJobById(jobId) {
         id,
         status,
         email,
+        name,
         domain,
         created_at,
         updated_at,
