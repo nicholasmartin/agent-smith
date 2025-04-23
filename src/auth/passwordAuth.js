@@ -35,12 +35,22 @@ async function createUserWithPassword(email, password, metadata = {}) {
   try {
     // First, check if the user already exists using admin API
     console.log(`[AUTH] Checking if user exists: ${email}`);
-    const { data: existingUser, error: getUserError } = await adminSupabase.auth.admin.getUserByEmail(email);
     
-    if (getUserError && !getUserError.message.includes('not found')) {
-      console.error(`[AUTH] Error checking user existence: ${getUserError.message}`);
-      throw getUserError;
+    // Use listUsers to find a user by email (since getUserByEmail doesn't exist)
+    const { data, error: listError } = await adminSupabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error(`[AUTH] Error listing users: ${listError.message}`);
+      throw listError;
     }
+    
+    // According to the docs, users are in data.users
+    console.log(`[AUTH] Found ${data?.users?.length || 0} users`);
+    
+    // Find the user with matching email
+    const existingUser = data?.users?.find(user => 
+      user.email && user.email.toLowerCase() === email.toLowerCase()
+    );
     
     if (existingUser) {
       console.log(`[AUTH] User already exists, updating password: ${email}`);
