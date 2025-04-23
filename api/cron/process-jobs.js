@@ -169,7 +169,8 @@ async function processJob(job) {
             type: 'magiclink',
             email: job.email,
             options: {
-              redirectTo: `${process.env.SITE_URL || 'https://agent-smith.magloft.com'}/dashboard`,
+              // Ensure we always redirect to the dashboard with a fully qualified URL
+              redirectTo: 'https://agent-smith.magloft.com/dashboard',
               data: {
                 name: job.name,
                 source: 'agent_smith'
@@ -245,7 +246,7 @@ async function processJob(job) {
           type: 'magiclink',
           email: job.email,
           options: {
-            redirectTo: `${process.env.SITE_URL || 'https://agent-smith.magloft.com'}/dashboard`,
+            redirectTo: 'https://agent-smith.magloft.com/dashboard',
             data: {
               name: job.name,
               source: 'agent_smith'

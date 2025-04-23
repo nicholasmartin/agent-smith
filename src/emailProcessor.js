@@ -251,7 +251,8 @@ async function checkJobStatus(jobId) {
           type: 'magiclink',
           email: job.email,
           options: {
-            redirectTo: `${process.env.PUBLIC_URL || 'http://localhost:3000'}/dashboard`
+            // Use a fully qualified URL to ensure proper redirection
+            redirectTo: 'https://agent-smith.magloft.com/dashboard'
           }
         });
         
@@ -336,7 +337,8 @@ async function processCompletedJobs() {
           type: 'magiclink',
           email: job.email,
           options: {
-            redirectTo: `${process.env.PUBLIC_URL || 'http://localhost:3000'}/dashboard`
+            // Use a fully qualified URL to ensure proper redirection
+            redirectTo: 'https://agent-smith.magloft.com/dashboard'
           }
         });
         
