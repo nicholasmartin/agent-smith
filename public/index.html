@@ -563,6 +563,16 @@
     </footer>
 
     <!-- Load our form handlers and authentication scripts -->    
+    <script src="/js/config.js"></script> <!-- Load dynamic configuration first -->
+    <script>
+      // Debug validation for config loading
+      window.addEventListener('load', function() {
+        console.log('DEBUG: Config loaded:', !!window.AGENT_SMITH_CONFIG);
+        if (!window.AGENT_SMITH_CONFIG || !window.AGENT_SMITH_CONFIG.websiteFormSecret) {
+          console.error('WARNING: Agent Smith config not properly loaded!');
+        }
+      });
+    </script>
     <script src="js/supabase-client.js"></script> <!-- Load Supabase client and main listener -->
     <script src="js/form-handlers.js"></script>
     <script src="js/supabase-auth.js"></script> <!-- Load signup-specific logic -->

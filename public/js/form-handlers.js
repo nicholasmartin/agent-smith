@@ -50,6 +50,10 @@ function setupSignupForm() {
       // Get CSRF token from dynamic config
       const csrfToken = window.AGENT_SMITH_CONFIG?.csrfToken || '';
       
+      // Debug the websiteFormSecret being used
+      const websiteSecret = window.AGENT_SMITH_CONFIG?.websiteFormSecret || '';
+      console.log('DEBUG: Using websiteFormSecret:', websiteSecret ? (websiteSecret.substr(0, 3) + '...') : 'MISSING');
+      
       // Submit the form with security headers
       const response = await fetch('/api/website-signup', {
         method: 'POST',
