@@ -1,11 +1,11 @@
 /**
  * Email Delivery Module for Agent Smith
  * 
- * This module centralizes all email sending and magic link generation
- * to ensure we only generate one magic link per user.
+ * This module centralizes all email sending and password creation link generation
+ * to ensure consistent authentication flow.
  */
 
-const magicLinkGenerator = require('./auth/magicLinkGenerator');
+const { generatePasswordCreationLink } = require('./auth/passwordAuth');
 const emailService = require('./emailService');
 const supabase = require('./supabaseClient');
 
@@ -22,37 +22,36 @@ async function sendJobCompletionEmail(job, emailContent, requiresAuth = false) {
   try {
     console.log(`[EmailDelivery] Preparing email for: ${job.email}`);
     
-    // Only generate magic link for website submissions that require authentication
+    // Only generate password creation link for website submissions that require authentication
     let signInLink = null;
     
-    // MAGIC_LINK_DEBUG: Log detailed information about the job and auth requirements
-    console.log(`MAGIC_LINK_DEBUG: Job details - ID: ${job.id}, Email: ${job.email}, Name: ${job.name}`);
-    console.log(`MAGIC_LINK_DEBUG: Auth flags - from_website: ${job.from_website}, requiresAuth: ${requiresAuth}`);
-    console.log(`MAGIC_LINK_DEBUG: User ID in job: ${job.user_id || 'not set'}`);
+    // AUTH_DEBUG: Log detailed information about the job and auth requirements
+    console.log(`AUTH_DEBUG: Job details - ID: ${job.id}, Email: ${job.email}, Name: ${job.name}`);
+    console.log(`AUTH_DEBUG: Auth flags - from_website: ${job.from_website}, requiresAuth: ${requiresAuth}`);
+    console.log(`AUTH_DEBUG: User ID in job: ${job.user_id || 'not set'}`);
     
     if (requiresAuth) {
-      console.log(`MAGIC_LINK_DEBUG: Will attempt to generate magic link for ${job.email}`);
+      console.log(`AUTH_DEBUG: Generating password creation link for ${job.email}`);
       try {
-        console.log(`[EmailDelivery] Generating magic link for: ${job.email}`);
+        console.log(`[EmailDelivery] Generating password creation link for: ${job.email}`);
         
         // Verify required parameters are present
-        if (!job.email || !job.name) {
-          throw new Error(`Missing required parameters: email=${job.email}, name=${job.name}`);
+        if (!job.email || !job.id) {
+          throw new Error(`Missing required parameters: email=${job.email}, job.id=${job.id}`);
         }
         
-        signInLink = await magicLinkGenerator.generateMagicLink(job.email, job.name, {
-          source: 'agent_smith_email_delivery'
-        });
+        // Generate password creation link
+        signInLink = generatePasswordCreationLink(job.email, job.id);
         
-        console.log(`MAGIC_LINK_DEBUG: Magic link generation returned: ${signInLink ? 'SUCCESS' : 'NULL'}`);
-        console.log(`[EmailDelivery] Magic link generated successfully for ${job.email}`);
+        console.log(`AUTH_DEBUG: Password link generation returned: ${signInLink ? 'SUCCESS' : 'NULL'}`);
+        console.log(`[EmailDelivery] Password creation link generated successfully for ${job.email}`);
       } catch (linkError) {
-        console.error(`MAGIC_LINK_DEBUG: ERROR generating magic link: ${linkError.message}`);
-        console.error(`[EmailDelivery] Error generating magic link: ${linkError.message}`);
+        console.error(`AUTH_DEBUG: ERROR generating password link: ${linkError.message}`);
+        console.error(`[EmailDelivery] Error generating password link: ${linkError.message}`);
         // Continue without auth link if generation fails
       }
     } else {
-      console.log(`MAGIC_LINK_DEBUG: Skipping magic link generation because requiresAuth=${requiresAuth}`);
+      console.log(`AUTH_DEBUG: Skipping password link generation because requiresAuth=${requiresAuth}`);
     }
     
     // Send the email with content and optional magic link

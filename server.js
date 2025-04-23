@@ -18,6 +18,8 @@ const { authMiddleware } = require('./src/middleware/auth');
 const authRoutes = require('./src/routes/auth');
 const dashboardRoutes = require('./src/routes/dashboard');
 const apiRoutes = require('./src/routes/api');
+const createPasswordRoute = require('./src/routes/auth/create-password');
+const loginRoute = require('./src/routes/auth/login');
 
 // Initialize Express app
 const app = express();
@@ -40,9 +42,14 @@ app.use((req, res, next) => {
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Auth callback route (does not need the main authMiddleware as it handles its own Supabase client)
-const authCallback = require('./api/auth/callback');
-app.get('/auth/callback', authCallback);
+// Password-based auth routes
+app.use('/api/auth', createPasswordRoute);
+app.use('/api/auth', loginRoute);
+
+// Create password page route
+app.get('/create-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'create-password.html'));
+});
 
 // Apply route modules
 // Public/Auth routes (login page, etc.) - No authMiddleware needed here
