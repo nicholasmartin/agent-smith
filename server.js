@@ -40,17 +40,19 @@ app.use((req, res, next) => {
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Apply auth middleware to all routes
-app.use(authMiddleware);
-
-// Auth callback route
+// Auth callback route (does not need the main authMiddleware as it handles its own Supabase client)
 const authCallback = require('./api/auth/callback');
 app.get('/auth/callback', authCallback);
 
 // Apply route modules
-app.use('/', authRoutes);
-app.use('/dashboard', dashboardRoutes);
-app.use('/api', apiRoutes);
+// Public/Auth routes (login page, etc.) - No authMiddleware needed here
+app.use('/', authRoutes); 
+
+// Dashboard routes - Apply authMiddleware here
+app.use('/dashboard', authMiddleware, dashboardRoutes);
+
+// API routes - Apply authMiddleware here
+app.use('/api', authMiddleware, apiRoutes);
 
 // Serve the WEBSITE_FORM_SECRET as a JavaScript variable
 app.get('/js/config.js', (req, res) => {
