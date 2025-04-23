@@ -17,6 +17,7 @@ const emailService = require('./emailService');
  */
 async function processSignup(email, name, apiKeyId, companyId, fromWebsite = false) {
   try {
+    console.log(`[EmailProcessor] ENTER processSignup for ${email} (Name: ${name}, API Key ID: ${apiKeyId}, Company ID: ${companyId}, From Website: ${fromWebsite})`);
     console.log(`[EmailProcessor] Processing signup for ${email} from ${fromWebsite ? 'website form' : 'API'}`);
     
     // Step 1: Check if it's a business domain
@@ -31,13 +32,14 @@ async function processSignup(email, name, apiKeyId, companyId, fromWebsite = fal
     // Step 2: Create Supabase Auth user immediately
     // This is the key change in our refactored authentication flow
     let userId = null;
+    let userData = null; // Define userData outside the try block
     
     if (fromWebsite) {
       console.log(`[EmailProcessor] Creating Supabase user for ${email}`);
       
       try {
         // Create user without sending email
-        const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+        const { data: createData, error: userError } = await supabase.auth.admin.createUser({
           email,
           email_confirm: true, // Mark email as confirmed
           user_metadata: { 
@@ -47,44 +49,85 @@ async function processSignup(email, name, apiKeyId, companyId, fromWebsite = fal
         });
         
         if (userError) {
-          console.error(`[EmailProcessor] Error creating user: ${userError.message}`);
+          // Check if it's a known 'user already exists' error (adjust codes/messages as needed)
+          const isDuplicateError = userError.message.includes('User already registered') || 
+                                  userError.message.includes('duplicate key value violates unique constraint') || 
+                                  userError.status === 422 || // Sometimes used for duplicates
+                                  userError.code === '23505'; // PostgreSQL unique violation
+
+          if (isDuplicateError) {
+            console.warn(`[EmailProcessor] User ${email} already exists. Attempting to fetch existing user ID.`);
+            // Try to fetch the existing user ID
+            const { data: existingUsers, error: fetchError } = await supabase.auth.admin.listUsers({ email });
+            if (fetchError || !existingUsers || existingUsers.length === 0) {
+              console.error(`[EmailProcessor] Failed to fetch existing user ID for ${email}:`, fetchError?.message || 'No user found');
+              // Decide how to handle: throw error, proceed without userId, etc.
+              // For now, let's throw to be safe, as we expect the user to exist.
+              throw new Error(`User ${email} exists but failed to fetch their ID.`);
+            } else {
+              userId = existingUsers[0].id;
+              console.log(`[EmailProcessor] Found existing user ID: ${userId} for ${email}`);
+              // Simulate userData structure if needed later (though profile upsert uses userId directly)
+              userData = { user: existingUsers[0] }; 
+            }
+          } else {
+            // It's a different, unexpected error - log details and throw
+            console.error(`[EmailProcessor] UNEXPECTED error creating user ${email}: Status=${userError.status}, Code=${userError.code}, Message=${userError.message}`, userError);
+            throw new Error(`Failed to create Supabase user for ${email}: ${userError.message}`); // Halt execution
+          }
         } else {
+          // User creation successful
+          userData = createData; // Assign successful creation data
           userId = userData.user.id;
           console.log(`[EmailProcessor] Created user with ID: ${userId}`);
-          
-          // Create/update user profile
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: userId,
-              name: name,
-              account_completed: false,
-              updated_at: new Date()
-            });
-            
-          if (profileError) {
-            console.error(`[EmailProcessor] Error creating profile: ${profileError.message}`);
-          }
         }
       } catch (authError) {
-        console.error(`[EmailProcessor] Exception creating user: ${authError.message}`);
+        // Catch exceptions from the try block (e.g., fetching existing user fails)
+        console.error(`[EmailProcessor] EXCEPTION during user/profile handling for ${email}: ${authError.message}`);
+        // Re-throw the error to halt execution of processSignup
+        throw authError; 
+      }
+      
+      // Only attempt profile upsert if we have a valid userId (either new or fetched)
+      if (userId) {
+        console.log(`[EmailProcessor] Upserting profile for user ID: ${userId}`);
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            name: name,
+            // Check if user data exists and has profile data to merge if needed, otherwise set defaults
+            // Example: account_completed might come from existing profile data if fetched
+            account_completed: userData?.user?.user_metadata?.account_completed ?? false, 
+            updated_at: new Date()
+          }, { onConflict: 'id' }); // Ensure conflict resolution is on 'id'
+        
+        if (profileError) { 
+          // Log profile error but potentially continue? Or throw?
+          // For now, log warning and continue, job might still be useful without full profile sync.
+          console.warn(`[EmailProcessor] Error upserting profile for user ${userId}: ${profileError.message}`);
+        }
+      } else {
+        // This case should ideally not be reached if we throw errors above correctly
+        console.warn(`[EmailProcessor] Skipping profile upsert as userId is null for ${email}.`);
       }
     }
     
     // Step 3: Create a job record with user ID
     console.log(`Creating job record for ${name} (${email}) from domain ${domain}`);
     
-    // Create job with new security parameters and user ID
-    const job = await jobStore.createJob({
+    const jobData = {
       email, 
       name, 
       domain, 
       apiKeyId,
       companyId, 
       fromWebsite,
-      userId, // Will be the user ID if created, or null
+      userId, // Will be the user ID if created or fetched, or null if fromWebsite=false or creation failed
       email_sent: false // Flag to indicate if the final email has been sent
-    });
+    };
+    console.log('[EmailProcessor] Job data before creation:', jobData);
+    const job = await jobStore.createJob(jobData);
     
     console.log(`[EmailProcessor] Job created with ID: ${job.id}`);
     
