@@ -124,7 +124,10 @@ function isPersonalEmail(email) {
   return personalDomains.includes(domain);
 }
 
-// Initialize when DOM is loaded
+// Do not initialize automatically - form-handlers.js is already handling form submission
+// Comment out to prevent duplicate form submission
+/*
 document.addEventListener('DOMContentLoaded', () => {
   setupSupabaseSignup();
 });
+*/
