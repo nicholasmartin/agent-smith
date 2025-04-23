@@ -3,60 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verifying Your Account - Agent Smith</title>
+    <title>Verifying Your Account | Agent Smith</title>
     <meta name="supabase-url" content="https://jnpdszffuosiirapfvwp.supabase.co">
-    <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MTYxNTMsImV4cCI6MjA1OTM5MjE1M30._y12tD3iyz2g6IuUbokPPNM6_3SfcnkbCnJP0CGeef4">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
+    <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTk0NjA4NjAsImV4cCI6MjAxNTAzNjg2MH0.Ry_pZwLhfOVsrLX0h1k4-FEHiBzxQFvJe6ykiIXQeOw">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: #f9fafb;
-            color: #1f2937;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            padding: 0;
+            min-height: 100vh;
+            color: #333;
         }
-        
         .container {
-            max-width: 500px;
-            padding: 2rem;
             background-color: white;
             border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 40px;
             text-align: center;
+            max-width: 500px;
+            width: 90%;
         }
-        
         h1 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
         }
-        
         p {
-            margin-bottom: 1.5rem;
-            color: #6b7280;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
         }
-        
+        .error {
+            color: #e53935;
+            background-color: #ffebee;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
             border-radius: 50%;
-            border-left-color: #4CAF50;
+            border-top: 4px solid #2196F3;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
+            margin: 0 auto 20px;
         }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .error {
-            color: #ef4444;
+        #status {
+            margin-top: 20px;
             font-weight: 500;
+        }
+        .button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            display: inline-block;
+        }
+        .button:hover {
+            background-color: #1976D2;
+            text-decoration: none;
         }
     </style>
 </head>
@@ -71,7 +97,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const statusElement = document.getElementById('status');
-            const params = new URLSearchParams(window.location.hash.substring(1));
             
             // Initialize Supabase client
             const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
@@ -80,72 +105,76 @@
             
             try {
                 console.log('Auth callback page loaded');
-                console.log('URL hash:', window.location.hash);
+                console.log('URL search:', window.location.search);
                 
-                // Check if we have an access token in the URL
-                const accessToken = params.get('access_token');
-                const refreshToken = params.get('refresh_token');
-                const expiresIn = params.get('expires_in');
+                // Get the token from the URL - this is the standard format for Supabase email verification
+                const params = new URLSearchParams(window.location.search);
+                const token = params.get('token');
+                const type = params.get('type');
                 
-                if (accessToken) {
-                    console.log('Found access token in URL');
+                if (!token) {
+                    throw new Error('No verification token found in URL');
+                }
+                
+                if (type !== 'signup' && type !== 'recovery' && type !== 'invite') {
+                    throw new Error('Invalid verification type');
+                }
+                
+                // According to Supabase docs, we need to call verifyOtp with the token
+                statusElement.innerHTML = '<p>Processing verification...</p>';
+                
+                // Use the official Supabase method to verify the token
+                const { data, error } = await supabase.auth.verifyOtp({
+                    token_hash: token,
+                    type: type
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Check if we have a session
+                if (data && data.session) {
+                    console.log('Email verified successfully');
+                    console.log('Session established:', !!data.session);
                     
-                    // Store the session manually
-                    const session = {
-                        access_token: accessToken,
-                        refresh_token: refreshToken,
-                        expires_in: parseInt(expiresIn || '3600'),
-                        expires_at: Math.floor(Date.now() / 1000) + parseInt(expiresIn || '3600')
-                    };
-                    
-                    // Store in localStorage for persistence
-                    localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-                    
-                    // Set the session in Supabase
-                    await supabase.auth.setSession(session);
-                    
-                    console.log('Session set successfully');
-                    
-                    // Redirect to dashboard
-                    window.location.href = '/dashboard';
-                } else {
-                    // Try to handle the URL as an auth callback
-                    console.log('No access token found, trying to handle auth callback');
-                    
-                    const { data, error } = await supabase.auth.getSession();
-                    
-                    if (error) {
-                        throw error;
+                    // Store session in localStorage for extra reliability
+                    if (data.session.access_token) {
+                        localStorage.setItem('sb-access-token', data.session.access_token);
+                        localStorage.setItem('sb-refresh-token', data.session.refresh_token);
+                        
+                        // Also store in the Supabase-specific format
+                        const sessionData = {
+                            access_token: data.session.access_token,
+                            refresh_token: data.session.refresh_token,
+                            expires_at: data.session.expires_at,
+                            user: data.user
+                        };
+                        localStorage.setItem('sb-jnpdszffuosiirapfvwp-auth-token', JSON.stringify(sessionData));
                     }
                     
-                    if (data.session) {
-                        console.log('Session found, redirecting to dashboard');
+                    // Show success message
+                    statusElement.innerHTML = `
+                        <p>Your email has been verified successfully!</p>
+                        <a href="/dashboard" class="button">Continue to Dashboard</a>
+                    `;
+                    
+                    // Redirect after a short delay
+                    setTimeout(() => {
                         window.location.href = '/dashboard';
-                    } else {
-                        // Try to exchange the auth code for a session
-                        console.log('No session found, checking for auth code');
-                        
-                        // If we're on this page with no session, we might be in the middle of OAuth or email verification
-                        // Let's check if we can get a session from the current URL
-                        const { data, error } = await supabase.auth.getUser();
-                        
-                        if (error) {
-                            throw error;
-                        }
-                        
-                        if (data.user) {
-                            console.log('User authenticated, redirecting to dashboard');
-                            window.location.href = '/dashboard';
-                        } else {
-                            throw new Error('No authentication data found');
-                        }
-                    }
+                    }, 2000);
+                } else {
+                    // This should not happen if verifyOtp succeeded
+                    throw new Error('Verification successful but no session was created');
                 }
             } catch (error) {
                 console.error('Authentication error:', error);
-                statusElement.innerHTML = `<p class="error">Error: ${error.message || 'Failed to verify your account'}</p>
-                                          <p>Please <a href="/login.html">click here</a> to log in manually.</p>`;
-                statusElement.style.display = 'block';
+                statusElement.innerHTML = `
+                    <p class="error">Error: ${error.message || 'Failed to verify your account'}</p>
+                    <p>Please try logging in with your email and password.</p>
+                    <a href="/login.html" class="button">Go to Login</a>
+                `;
+                document.querySelector('.spinner').style.display = 'none';
             }
         });
     </script>
