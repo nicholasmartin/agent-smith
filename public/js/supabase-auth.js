@@ -3,27 +3,6 @@
  * Implements passwordless (magic link) authentication flow
  */
 
-// Initialize Supabase client
-function initSupabaseClient() {
-  const supabaseUrl = document.querySelector('meta[name="supabase-url"]')?.content;
-  const supabaseKey = document.querySelector('meta[name="supabase-anon-key"]')?.content;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase configuration missing');
-    return null;
-  }
-  
-  // Initialize the client
-  try {
-    window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
-    console.log('Supabase client initialized');
-    return window.supabase;
-  } catch (error) {
-    console.error('Failed to initialize Supabase client:', error);
-    return null;
-  }
-}
-
 // Handle signup form submission with passwordless authentication
 function setupSupabaseSignup() {
   const form = document.getElementById('signup-form');
@@ -33,10 +12,12 @@ function setupSupabaseSignup() {
   
   if (!form) return;
   
-  // Initialize Supabase client
-  const supabaseClient = initSupabaseClient();
+  // Use the globally initialized Supabase client
+  const supabaseClient = window.supabase; 
   if (!supabaseClient) {
-    console.error('Supabase client not available, passwordless auth will not work');
+    console.error('Supabase client not available globally, passwordless auth will not work');
+    // Optionally show an error message to the user
+    showStatus('error', 'Authentication service unavailable. Please try again later.');
     return;
   }
   
