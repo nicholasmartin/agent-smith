@@ -22,6 +22,13 @@ function initSupabase() {
     }
     
     // Create and return the Supabase client
+    // When using the CDN version, the global object is named 'supabase'
+    if (typeof supabase === 'undefined') {
+      console.error('Supabase library not loaded');
+      return null;
+    }
+    
+    console.log('[AUTH] Creating Supabase client with URL:', supabaseUrl);
     const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
     
     // Add helper methods to the client
