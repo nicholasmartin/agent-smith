@@ -8,10 +8,20 @@
         "memory": 1024,
         "maxDuration": 60
       }
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.js" }
+  "routes": [
+    { "src": "/js/config.js", "dest": "/api/index.js" },
+    { "src": "/auth/callback", "dest": "/api/index.js" },
+    { "src": "/api/(.*)", "dest": "/api/index.js" },
+    { "src": "/dashboard", "dest": "/api/index.js" },
+    { "src": "/dashboard/(.*)", "dest": "/api/index.js" },
+    { "src": "/(.*\\.(js|css|ico|jpg|jpeg|png|svg|webp|html))", "dest": "/public/$1" },
+    { "src": "/(.*)", "dest": "/api/index.js" }
   ],
   "crons": [
     {
