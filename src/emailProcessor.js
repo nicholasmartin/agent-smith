@@ -57,13 +57,23 @@ async function processSignup(email, name, apiKeyId, companyId, fromWebsite = fal
 
           if (isDuplicateError) {
             console.warn(`[EmailProcessor] User ${email} already exists. Attempting to fetch existing user ID.`);
+            console.log(`[EmailProcessor] Calling listUsers for ${email}...`);
             // Try to fetch the existing user ID
             const { data: existingUsers, error: fetchError } = await supabase.auth.admin.listUsers({ email });
-            if (fetchError || !existingUsers || existingUsers.length === 0) {
-              console.error(`[EmailProcessor] Failed to fetch existing user ID for ${email}:`, fetchError?.message || 'No user found');
+            
+            // Add extra logging to diagnose listUsers result:
+            console.log(`[EmailProcessor] listUsers raw response for ${email}:`, JSON.stringify({ data: existingUsers, error: fetchError }, null, 2));
+            
+            // Check for fetch error OR empty/invalid response structure
+            if (fetchError || !existingUsers || existingUsers.length === 0 || !existingUsers[0]?.id) { 
+              console.error(`[EmailProcessor] Failed to fetch existing user ID for ${email}:`, fetchError?.message || 'No valid user found in listUsers response');
+              // Log the problematic structure if possible
+              if (existingUsers) {
+                console.error(`[EmailProcessor] listUsers returned structure: ${JSON.stringify(existingUsers)}`);
+              }
               // Decide how to handle: throw error, proceed without userId, etc.
               // For now, let's throw to be safe, as we expect the user to exist.
-              throw new Error(`User ${email} exists but failed to fetch their ID.`);
+              throw new Error(`User ${email} exists but failed to fetch their valid ID.`);
             } else {
               userId = existingUsers[0].id;
               console.log(`[EmailProcessor] Found existing user ID: ${userId} for ${email}`);

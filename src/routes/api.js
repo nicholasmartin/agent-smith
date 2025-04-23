@@ -16,6 +16,7 @@ const { validateApiKey, validateWebsiteSecret } = require('../middleware/validat
 
 // Website form submission endpoint with special protection
 router.post('/website-signup', validateWebsiteSecret, async (req, res) => {
+  console.log(`[Server] ENTER /api/website-signup handler. Request ID (if available): ${req.headers['x-vercel-id'] || 'N/A'}`); // Log entry
   try {
     const { email, name } = req.body;
     
