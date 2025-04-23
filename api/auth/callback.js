@@ -5,9 +5,7 @@
  * exchanging the auth code for a session and redirecting to the appropriate page.
  * It's designed to work with magic links and other authentication flows.
  * 
- * This version has been enhanced to handle URL hash parameters and token exchange
- * for magic link authentication, addressing issues with email security scanners
- * and token consumption.
+ * Based on official Supabase documentation for handling auth callbacks.
  */
 
 const { createPagesServerClient } = require('@supabase/auth-helpers-nextjs');
@@ -25,14 +23,11 @@ module.exports = async (req, res) => {
     
     // Extract auth parameters from query
     const code = req.query.code;
-    let accessToken = req.query.access_token;
-    let refreshToken = req.query.refresh_token;
+    const type = req.query.type; // auth type (e.g., 'magiclink')
     const redirectTo = req.query.redirect_to || '/dashboard';
-    let type = req.query.type; // auth type (e.g., 'magiclink')
     
-    // Since we're getting a hash fragment in the URL, we need to handle it differently
-    // The hash fragment isn't sent to the server, so we need to use client-side handling
-    // For now, we'll use the code flow and redirect to the dashboard with special handling
+    // Important: The hash fragment with access_token and refresh_token is not accessible server-side
+    // It will be handled by the client-side JavaScript in auth-handler.js
     
     // Handle code exchange (standard OAuth flow)
     if (code) {
@@ -52,54 +47,62 @@ module.exports = async (req, res) => {
         console.error('[AUTH] Exception during code exchange:', exchangeError);
         return res.redirect('/login?error=code_exchange_exception');
       }
-    }
-    // Handle direct token auth (magic link flow)
-    else if (accessToken && refreshToken) {
-      console.log('[AUTH] Auth tokens found, setting session');
-      
-      try {
-        // Set the session directly with the provided tokens
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        });
-        
-        if (error) {
-          console.error('[AUTH] Token session error:', error.message);
-          return res.redirect('/login?error=token_session_error');
-        }
-        
-        console.log('[AUTH] Session successfully set from tokens');
-      } catch (tokenError) {
-        console.error('[AUTH] Exception during token session:', tokenError);
-        return res.redirect('/login?error=token_session_exception');
-      }
     } else {
-      console.log('[AUTH] No auth code or tokens found in request');
+      console.log('[AUTH] No auth code found in request - will rely on client-side handling');
     }
     
-    // Give the session time to establish
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Verify the session was established
+    // Verify if a session was established
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError) {
-      console.error('[AUTH] Error verifying session:', sessionError);
-      return res.redirect('/login?error=session_verification_error');
+      console.error('[AUTH] Error verifying session:', sessionError.message);
     }
     
-    if (!session) {
-      console.warn('[AUTH] No session established after authentication');
-      return res.redirect('/login?error=no_session_established');
+    if (session) {
+      console.log('[AUTH] Session verified server-side, redirecting to:', redirectTo);
+      return res.redirect(redirectTo);
     }
     
-    console.log('[AUTH] Session verified, redirecting to:', redirectTo);
+    // If no session was established server-side, we'll redirect to a special URL
+    // that will trigger client-side auth handling with the hash parameters
+    console.log('[AUTH] No session established server-side, redirecting to client-side handler');
     
-    // Redirect to the specified path or dashboard
-    res.redirect(redirectTo);
+    // Create a special HTML page that will handle the hash fragment
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Authenticating...</title>
+      <script>
+        // This script will run in the browser and handle the hash fragment
+        window.onload = function() {
+          console.log('[AUTH-REDIRECT] Processing authentication redirect');
+          
+          // If there's a hash in the URL, we need to pass it to the dashboard
+          if (window.location.hash) {
+            console.log('[AUTH-REDIRECT] Hash fragment detected, redirecting to dashboard with hash');
+            // Redirect to dashboard with the hash intact
+            window.location.href = '/dashboard' + window.location.hash;
+          } else {
+            console.log('[AUTH-REDIRECT] No hash fragment, redirecting to dashboard');
+            // No hash, just redirect to dashboard
+            window.location.href = '/dashboard';
+          }
+        };
+      </script>
+    </head>
+    <body>
+      <h1>Authenticating...</h1>
+      <p>Please wait while we complete your authentication.</p>
+    </body>
+    </html>
+    `;
+    
+    // Send the HTML response
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
   } catch (error) {
-    console.error('[AUTH] Auth callback error:', error);
-    res.redirect('/login?error=callback_error');
+    console.error('[AUTH] Callback error:', error);
+    res.redirect('/login?error=callback_exception');
   }
 };
