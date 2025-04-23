@@ -5,7 +5,7 @@
 const jobStore = require('../../src/jobStore');
 const webScraper = require('../../src/webScraper');
 const emailGenerator = require('../../src/emailGenerator');
-const emailService = require('../../src/emailService');
+const emailDelivery = require('../../src/emailDelivery');
 const slackNotifier = require('../../src/slackNotifier');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -162,45 +162,18 @@ async function processJob(job) {
       // We'll send an email for all completed jobs that have a user_id
       if (job.user_id && !job.email_sent) {
         try {
-          console.log(`[Cron] Sending combined email to ${job.email} with AI content and auth link`);
+          console.log(`[Cron] Sending combined email to ${job.email} with AI content and optional auth`);
           
-          // Generate sign-in link
-          const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'magiclink',
-            email: job.email,
-            options: {
-              // Ensure we always redirect to the dashboard with a fully qualified URL
-              redirectTo: 'https://agent-smith.magloft.com/dashboard',
-              data: {
-                name: job.name,
-                source: 'agent_smith'
-              }
-            }
-          });
+          // Determine if this job requires authentication (was it from the website?)
+          const requiresAuth = job.from_website === true;
           
-          if (linkError) {
-            console.error(`[Cron] Error generating sign-in link: ${linkError.message}`);
+          // Send email with AI content and optional auth link using the centralized delivery module
+          const emailResult = await emailDelivery.sendJobCompletionEmail(job, emailDraft, requiresAuth);
+          
+          if (emailResult.success) {
+            console.log(`[Cron] Combined email sent successfully to ${job.email}, ID: ${emailResult.emailId}`);
           } else {
-            // Get the magic link from the response
-            const signInLink = linkData.properties.action_link;
-            console.log(`[Cron] Sign-in link generated successfully`);
-            
-            // Send email with AI content and sign-in link
-            const emailResult = await emailService.sendJobCompletionEmail(job, emailDraft, signInLink);
-            
-            if (emailResult.success) {
-              console.log(`[Cron] Combined email sent successfully to ${job.email}, ID: ${emailResult.emailId}`);
-              
-              // Mark email as sent in the job record
-              const { data, error } = await supabase
-                .from('jobs')
-                .update({ email_sent: true })
-                .eq('id', job.id);
-                
-              if (error) {
-                console.error(`[Cron] Error marking email as sent: ${error.message}`);
-              }
-            }
+            console.error(`[Cron] Failed to send email to ${job.email}`);
           }
         } catch (error) {
           console.error(`[Cron] Error in email sending process: ${error.message}`);
@@ -239,44 +212,18 @@ async function processJob(job) {
     // We'll send an email for all completed jobs that have a user_id
     if (job.user_id && !job.email_sent) {
       try {
-        console.log(`[Cron] Sending combined email to ${job.email} with AI content and auth link`);
+        console.log(`[Cron] Sending combined email to ${job.email} with AI content and optional auth`);
         
-        // Generate sign-in link
-        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: job.email,
-          options: {
-            redirectTo: 'https://agent-smith.magloft.com/dashboard',
-            data: {
-              name: job.name,
-              source: 'agent_smith'
-            }
-          }
-        });
+        // Determine if this job requires authentication (was it from the website?)
+        const requiresAuth = job.from_website === true;
         
-        if (linkError) {
-          console.error(`[Cron] Error generating sign-in link: ${linkError.message}`);
+        // Send email with AI content and optional auth link using the centralized delivery module
+        const emailResult = await emailDelivery.sendJobCompletionEmail(job, emailDraft, requiresAuth);
+        
+        if (emailResult.success) {
+          console.log(`[Cron] Combined email sent successfully to ${job.email}, ID: ${emailResult.emailId}`);
         } else {
-          // Get the magic link from the response
-          const signInLink = linkData.properties.action_link;
-          console.log(`[Cron] Sign-in link generated successfully`);
-          
-          // Send email with AI content and sign-in link
-          const emailResult = await emailService.sendJobCompletionEmail(job, emailDraft, signInLink);
-          
-          if (emailResult.success) {
-            console.log(`[Cron] Combined email sent successfully to ${job.email}, ID: ${emailResult.emailId}`);
-            
-            // Mark email as sent in the job record
-            const { data, error } = await supabase
-              .from('jobs')
-              .update({ email_sent: true })
-              .eq('id', job.id);
-              
-            if (error) {
-              console.error(`[Cron] Error marking email as sent: ${error.message}`);
-            }
-          }
+          console.error(`[Cron] Failed to send email to ${job.email}`);
         }
       } catch (error) {
         console.error(`[Cron] Error in email sending process: ${error.message}`);

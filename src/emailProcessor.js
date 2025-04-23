@@ -4,7 +4,7 @@ const emailGenerator = require('./emailGenerator');
 const slackNotifier = require('./slackNotifier');
 const jobStore = require('./jobStore');
 const supabase = require('./supabaseClient');
-const emailService = require('./emailService');
+const emailDelivery = require('./emailDelivery');
 
 /**
  * Process a new signup by checking the domain and starting the scraping job
@@ -245,29 +245,12 @@ async function checkJobStatus(jobId) {
         // Send notification to Slack (optional)
         // await slackNotifier.sendToSlack(job.name, job.email, job.domain, emailDraft, websiteData);
         
-        // Generate a magic link for the user
-        console.log(`Generating magic link for: ${job.email}`);
-        const { data: { properties }, error: linkError } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: job.email,
-          options: {
-            // Use a fully qualified URL to ensure proper redirection
-            redirectTo: 'https://agent-smith.magloft.com/dashboard'
-          }
-        });
+        // Determine if this job requires authentication (was it from the website?)
+        const requiresAuth = job.from_website === true;
         
-        if (linkError) {
-          console.error(`Error generating magic link: ${linkError.message}`);
-          throw linkError;
-        }
-        
-        // Extract the sign-in link from the properties
-        const signInLink = properties.action_link;
-        console.log(`Magic link generated for ${job.email}`);
-        
-        // Send the email with the AI content and magic link using Resend
-        console.log(`Sending email via Resend for: ${job.email}`);
-        const emailResult = await emailService.sendJobCompletionEmail(job, emailDraft, signInLink);
+        // Send the email with AI content and optional magic link using our centralized delivery
+        console.log(`[checkJobStatus] Sending email for: ${job.email} (Auth required: ${requiresAuth})`);
+        const emailResult = await emailDelivery.sendJobCompletionEmail(job, emailDraft, requiresAuth);
         
         // Update job as completed with email sent flag
         await jobStore.completeJobWithEmail(jobId, emailDraft, true); // true indicates email was sent
@@ -331,32 +314,14 @@ async function processCompletedJobs() {
     
     for (const job of jobs) {
       try {
-        // Generate a magic link for the user
-        console.log(`Generating magic link for: ${job.email}`);
-        const { data: { properties }, error: linkError } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: job.email,
-          options: {
-            // Use a fully qualified URL to ensure proper redirection
-            redirectTo: 'https://agent-smith.magloft.com/dashboard'
-          }
-        });
+        // Determine if this job requires authentication (was it from the website?)
+        const requiresAuth = job.from_website === true;
         
-        if (linkError) {
-          console.error(`Error generating magic link: ${linkError.message}`);
-          continue;
-        }
+        // Send the email with AI content and optional magic link using our centralized delivery
+        console.log(`[processCompletedJobs] Sending email for: ${job.email} (Auth required: ${requiresAuth})`);
+        const emailResult = await emailDelivery.sendJobCompletionEmail(job, JSON.parse(job.email_content), requiresAuth);
         
-        // Extract the sign-in link from the properties
-        const signInLink = properties.action_link;
-        console.log(`Magic link generated for ${job.email}`);
-        
-        // Send the email with the AI content and magic link using Resend
-        console.log(`Sending email via Resend for: ${job.email}`);
-        await emailService.sendJobCompletionEmail(job, JSON.parse(job.email_content), signInLink);
-        
-        // Update job to mark email as sent
-        await jobStore.updateJob(job.id, { email_sent: true });
+        // No need to update the job here as the emailDelivery module handles this
         
         successCount++;
         console.log(`[EmailProcessor] Successfully sent email for job ${job.id}`);
