@@ -161,13 +161,10 @@
             const loginBtn = document.getElementById('login-btn');
             const loginStatus = document.getElementById('login-status');
             
-            // Initialize Supabase client
-            const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
-            const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
-            const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+            // Use the global Supabase client initialized by supabase-client.js
             
             // Check if user is already signed in
-            supabase.auth.getSession().then(({ data: { session } }) => {
+            window.supabase.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
                     // Redirect to dashboard if already authenticated
                     window.location.href = '/dashboard';
