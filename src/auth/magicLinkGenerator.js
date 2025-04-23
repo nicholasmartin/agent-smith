@@ -49,14 +49,29 @@ async function generateMagicLink(email, name, options = {}) {
     throw new Error('Invalid magic link response structure');
   }
   
-  const signInLink = data.properties.action_link;
-  console.log(`[AUTH] Magic link generated successfully for ${email}: ${signInLink}`);
+  // Get the original link
+  let signInLink = data.properties.action_link;
+  console.log(`[AUTH] Original magic link: ${signInLink}`);
   
   // Verify the link is not null or undefined
   if (!signInLink) {
     console.error(`[AUTH] Magic link is null or undefined`);
     throw new Error('Magic link is null or undefined');
   }
+  
+  // Ensure the link has the required verification type parameter
+  // This fixes the "Verify requires a verification type" error
+  if (signInLink.includes('/verify?') && !signInLink.includes('&type=magiclink')) {
+    // Add the type parameter if it's missing
+    signInLink = signInLink.replace('/verify?', '/verify?type=magiclink&');
+  } else if (signInLink.includes('/verify?') && !signInLink.includes('type=')) {
+    // Add the type parameter if no type parameter exists
+    signInLink += '&type=magiclink';
+  }
+  
+  console.log(`[AUTH] Modified magic link: ${signInLink}`);
+  console.log(`[AUTH] Magic link generated successfully for ${email}`);
+  
   
   return signInLink;
 }
