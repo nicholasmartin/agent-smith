@@ -23,12 +23,16 @@ module.exports = async (req, res) => {
     if (queryParams.refresh_token) queryParams.refresh_token = '[REDACTED]';
     console.log('[AUTH] Callback parameters:', queryParams);
     
-    // Extract auth parameters
+    // Extract auth parameters from query
     const code = req.query.code;
-    const accessToken = req.query.access_token;
-    const refreshToken = req.query.refresh_token;
+    let accessToken = req.query.access_token;
+    let refreshToken = req.query.refresh_token;
     const redirectTo = req.query.redirect_to || '/dashboard';
-    const type = req.query.type; // auth type (e.g., 'magiclink')
+    let type = req.query.type; // auth type (e.g., 'magiclink')
+    
+    // Since we're getting a hash fragment in the URL, we need to handle it differently
+    // The hash fragment isn't sent to the server, so we need to use client-side handling
+    // For now, we'll use the code flow and redirect to the dashboard with special handling
     
     // Handle code exchange (standard OAuth flow)
     if (code) {
