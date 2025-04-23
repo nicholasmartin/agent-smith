@@ -34,6 +34,15 @@ async function authMiddleware(req, res, next) {
     // Get JWT from Authorization header or cookies
     const jwt = extractJWT(req);
     
+    // Make sure we have the required environment variables
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[AUTH] Missing required Supabase environment variables');
+      console.error('[AUTH] SUPABASE_URL:', !!process.env.SUPABASE_URL);
+      console.error('[AUTH] SUPABASE_ANON_KEY:', !!process.env.SUPABASE_ANON_KEY);
+      console.error('[AUTH] SUPABASE_SERVICE_ROLE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+      throw new Error('Missing required Supabase environment variables');
+    }
+    
     if (jwt) {
       console.log('[AUTH] Creating Supabase client with JWT');
       // Create a client with the JWT

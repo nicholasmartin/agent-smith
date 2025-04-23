@@ -39,6 +39,12 @@ router.post('/set-auth-cookie', (req, res) => {
       return res.status(400).json({ error: 'Missing access_token' });
     }
     
+    // Debug: Check environment variables
+    console.log('[AUTH] Environment variables check:');
+    console.log('[AUTH] SUPABASE_URL:', !!process.env.SUPABASE_URL);
+    console.log('[AUTH] SUPABASE_ANON_KEY:', !!process.env.SUPABASE_ANON_KEY);
+    console.log('[AUTH] SUPABASE_SERVICE_ROLE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    
     // Set the access token as a cookie
     res.cookie('sb-access-token', access_token, {
       maxAge: 3600 * 1000, // 1 hour
@@ -77,6 +83,35 @@ router.post('/set-auth-cookie', (req, res) => {
   } catch (error) {
     console.error('[AUTH] Error setting auth cookies:', error);
     res.status(500).json({ error: 'Failed to set auth cookies' });
+  }
+});
+
+// Debug endpoint to check environment variables
+router.get('/debug-env', (req, res) => {
+  try {
+    // Check required environment variables
+    const requiredVars = [
+      'SUPABASE_URL',
+      'SUPABASE_ANON_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY'
+    ];
+    
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    // Log the check but don't expose actual values
+    console.log('[DEBUG] Environment variable check:');
+    requiredVars.forEach(varName => {
+      console.log(`[DEBUG] ${varName}: ${!!process.env[varName]}`);
+    });
+    
+    res.json({
+      success: missingVars.length === 0,
+      missingVars,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    console.error('[DEBUG] Error checking environment variables:', error);
+    res.status(500).json({ error: 'Failed to check environment variables' });
   }
 });
 

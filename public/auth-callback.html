@@ -149,6 +149,8 @@
                     // Set cookies for server-side authentication
                     // We need to make a request to our server to set the cookies
                     try {
+                        statusElement.innerHTML = '<p>Setting authentication cookies...</p>';
+                        
                         // Make a request to a special endpoint that will set the cookies
                         const response = await fetch('/api/set-auth-cookie', {
                             method: 'POST',
@@ -163,12 +165,35 @@
                         });
                         
                         if (!response.ok) {
-                            console.error('Failed to set auth cookies:', await response.text());
+                            const errorText = await response.text();
+                            console.error('Failed to set auth cookies:', errorText);
+                            statusElement.innerHTML += `<p class="error">Error setting cookies: ${errorText}</p>`;
                         } else {
                             console.log('Auth cookies set successfully');
+                            statusElement.innerHTML += '<p>Authentication cookies set successfully!</p>';
+                            
+                            // Debug: Check environment variables
+                            try {
+                                const envResponse = await fetch('/api/debug-env', {
+                                    method: 'GET',
+                                    credentials: 'include'
+                                });
+                                
+                                if (envResponse.ok) {
+                                    const envData = await envResponse.json();
+                                    console.log('Environment variables check:', envData);
+                                    
+                                    if (envData.missingVars && envData.missingVars.length > 0) {
+                                        statusElement.innerHTML += `<p class="error">Missing environment variables: ${envData.missingVars.join(', ')}</p>`;
+                                    }
+                                }
+                            } catch (envError) {
+                                console.error('Error checking environment variables:', envError);
+                            }
                         }
                     } catch (cookieError) {
                         console.error('Error setting auth cookies:', cookieError);
+                        statusElement.innerHTML += `<p class="error">Error: ${cookieError.message}</p>`;
                     }
                     
                     // Show success message

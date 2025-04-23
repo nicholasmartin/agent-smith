@@ -12,6 +12,22 @@ const crypto = require('crypto');
 const express_rate_limit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 
+// Validate required environment variables
+const requiredEnvVars = [
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'WEBSITE_FORM_SECRET'
+];
+
+requiredEnvVars.forEach(varName => {
+  if (!process.env[varName]) {
+    console.error(`[SERVER] Missing required environment variable: ${varName}`);
+  } else {
+    console.log(`[SERVER] Found environment variable: ${varName}`);
+  }
+});
+
 // Import middleware
 const { authMiddleware, protectedRouteMiddleware, apiAuthMiddleware } = require('./src/middleware/auth');
 
