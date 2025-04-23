@@ -82,9 +82,26 @@ function extractJWT(req) {
     return authHeader.substring(7);
   }
   
-  // Then check cookies
-  if (req.cookies && req.cookies['sb-access-token']) {
-    return req.cookies['sb-access-token'];
+  // Check for Supabase cookies - multiple formats are possible
+  if (req.cookies) {
+    // Direct access token cookie
+    if (req.cookies['sb-access-token']) {
+      return req.cookies['sb-access-token'];
+    }
+    
+    // Check for project-specific cookie format
+    const projectRef = 'jnpdszffuosiirapfvwp'; // Your Supabase project reference
+    if (req.cookies[`sb-${projectRef}-auth-token`]) {
+      try {
+        // This cookie contains a JSON with session data
+        const sessionData = JSON.parse(req.cookies[`sb-${projectRef}-auth-token`]);
+        if (sessionData && sessionData.access_token) {
+          return sessionData.access_token;
+        }
+      } catch (e) {
+        console.error('[AUTH] Error parsing Supabase cookie:', e);
+      }
+    }
   }
   
   return null;
@@ -98,6 +115,15 @@ async function protectedRouteMiddleware(req, res, next) {
   console.log('[AUTH] Checking authentication for protected route');
   
   try {
+    // Get JWT from request
+    const jwt = extractJWT(req);
+    console.log('[AUTH] JWT found:', !!jwt);
+    
+    if (!jwt) {
+      console.log('[AUTH] No JWT found, redirecting to login');
+      return res.redirect('/login.html');
+    }
+    
     // Get user from Supabase
     const { data: { user }, error } = await req.supabase.auth.getUser();
     
