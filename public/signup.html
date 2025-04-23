@@ -12,7 +12,6 @@
     
     <!-- Supabase -->  
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
-    <script src="/js/supabase-client.js"></script>
     <style>
         :root {
             --brand-color: #4CAF50;
@@ -250,8 +249,13 @@
             const emailInput = document.getElementById('email');
             const passwordInput = document.getElementById('password');
             
+            // Initialize Supabase client directly
+            const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
+            const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
+            const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+            
             // Check if user is already signed in
-            window.supabase.auth.getSession().then(({ data: { session } }) => {
+            supabaseClient.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
                     // Redirect to dashboard if already authenticated
                     window.location.href = '/dashboard';
@@ -296,7 +300,7 @@
                 
                 try {
                     // Sign up with Supabase
-                    const { data, error } = await window.supabase.auth.signUp({
+                    const { data, error } = await supabaseClient.auth.signUp({
                         email,
                         password,
                         options: {
