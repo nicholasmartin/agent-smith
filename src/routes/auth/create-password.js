@@ -9,19 +9,33 @@ const express = require('express');
 const router = express.Router();
 const { createUserWithPassword } = require('../../auth/passwordAuth');
 const { getJobById } = require('../../jobStore');
+const supabase = require('../../supabaseClient');
 
-router.post('/create-password', async (req, res) => {
+// Make sure we're using the correct route path
+router.post('/', async (req, res) => {
+  console.log('[AUTH] Received password creation request');
   try {
     const { email, password, jobId } = req.body;
+    console.log(`[AUTH] Processing password creation for email: ${email}, jobId: ${jobId}`);
     
     if (!email || !password || !jobId) {
+      console.log('[AUTH] Missing required fields in request');
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
     // Verify job exists and belongs to this email
-    const job = await getJobById(jobId);
+    console.log(`[AUTH] Fetching job with ID: ${jobId}`);
+    let job;
+    try {
+      job = await getJobById(jobId);
+      console.log(`[AUTH] Job fetch result: ${job ? 'Found' : 'Not found'}`);
+    } catch (jobError) {
+      console.error(`[AUTH] Error fetching job: ${jobError.message}`);
+      return res.status(500).json({ error: `Error fetching job: ${jobError.message}` });
+    }
     
     if (!job) {
+      console.log(`[AUTH] Job not found with ID: ${jobId}`);
       return res.status(404).json({ error: 'Job not found' });
     }
     
@@ -29,17 +43,49 @@ router.post('/create-password', async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
-    // Create the user with password
-    const userData = await createUserWithPassword(email, password, {
-      name: job.name || email.split('@')[0],
-      source: 'agent_smith'
-    });
-    
-    res.status(200).json({ success: true, user: userData.user });
+    // Create or update the user with password
+    try {
+      console.log(`[AUTH] Creating/updating user account for: ${email}`);
+      
+      const userData = await createUserWithPassword(email, password, {
+        name: job.name || email.split('@')[0],
+        source: 'agent_smith',
+        job_id: jobId
+      });
+      
+      // If we get here, the user was either created or updated successfully
+      console.log(`[AUTH] User account operation successful for: ${email}`);
+      
+      return res.status(200).json({ 
+        success: true, 
+        user: userData.user,
+        message: 'Password set successfully' 
+      });
+    } catch (error) {
+      console.error(`[AUTH] Error in user creation/update: ${error.message}`);
+      
+      if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        return res.status(409).json({ 
+          error: 'A user with this email already exists. Please try signing in with your password.',
+          code: 'user_exists'
+        });
+      }
+      
+      return res.status(500).json({ 
+        error: `Error creating/updating user: ${error.message}`,
+        code: 'user_creation_error'
+      });
+    }
     
   } catch (error) {
     console.error('[AUTH] Password creation error:', error);
-    res.status(500).json({ error: error.message });
+    // Provide more detailed error information
+    const errorResponse = {
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      code: error.code || 'unknown_error'
+    };
+    res.status(500).json(errorResponse);
   }
 });
 

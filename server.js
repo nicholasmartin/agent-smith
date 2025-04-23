@@ -42,9 +42,9 @@ app.use((req, res, next) => {
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Password-based auth routes
-app.use('/api/auth', createPasswordRoute);
-app.use('/api/auth', loginRoute);
+// Password-based auth routes - no auth middleware needed for these
+app.use('/api/auth/create-password', createPasswordRoute);
+app.use('/api/auth/login', loginRoute);
 
 // Create password page route
 app.get('/create-password', (req, res) => {

@@ -17,6 +17,37 @@ const supabase = require('../supabaseClient');
 async function createUserWithPassword(email, password, metadata = {}) {
   console.log(`[AUTH] Creating user account for: ${email}`);
   
+  // Check if user already exists
+  try {
+    const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
+    
+    if (existingUser) {
+      console.log(`[AUTH] User already exists for email: ${email}, updating password`);
+      
+      // Update existing user's password
+      const { data: updatedUser, error: updateError } = await supabase.auth.admin.updateUserById(
+        existingUser.id,
+        { password: password, user_metadata: metadata }
+      );
+      
+      if (updateError) {
+        console.error(`[AUTH] Error updating user: ${updateError.message}`);
+        throw updateError;
+      }
+      
+      console.log(`[AUTH] User password updated successfully for: ${email}`);
+      return updatedUser;
+    }
+  } catch (checkError) {
+    // If error is not related to user not found, rethrow it
+    if (!checkError.message.includes('not found')) {
+      throw checkError;
+    }
+    // Otherwise continue with user creation
+    console.log(`[AUTH] User does not exist, creating new account`);
+  }
+  
+  // Create new user
   const { data, error } = await supabase.auth.admin.createUser({
     email,
     password,

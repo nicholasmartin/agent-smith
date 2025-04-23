@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     try {
       // Create user account with password
+      console.log('Submitting password creation request...');
       const response = await fetch('/api/auth/create-password', {
         method: 'POST',
         headers: {
@@ -55,25 +56,43 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create password');
+        // Special handling for user already exists error
+        if (response.status === 409 && data.code === 'user_exists') {
+          // User already exists, show message and try to sign in directly
+          successMessage.textContent = 'Account already exists. Attempting to sign in...';
+          successMessage.classList.remove('hidden');
+        } else {
+          throw new Error(data.error || 'Failed to create password');
+        }
+      } else {
+        // Show success message
+        successMessage.textContent = data.message || 'Password created! Signing you in...';
+        successMessage.classList.remove('hidden');
       }
       
-      // Show success message
-      successMessage.textContent = 'Password created! Signing you in...';
-      successMessage.classList.remove('hidden');
-      
-      // Sign in the user
-      const { error: signInError } = await window.supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (signInError) {
-        throw new Error(signInError.message);
+      try {
+        // Sign in the user
+        const { error: signInError } = await window.supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (signInError) {
+          throw signInError;
+        }
+        
+        // Redirect to dashboard
+        successMessage.textContent = 'Sign in successful! Redirecting to dashboard...';
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1000); // Short delay to show the success message
+      } catch (signInError) {
+        // If sign-in fails after password creation/update
+        console.error('Sign in error:', signInError);
+        errorMessage.textContent = 'Password set successfully, but sign-in failed. Please go to the login page.';
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
       }
-      
-      // Redirect to dashboard
-      window.location.href = '/dashboard';
       
     } catch (error) {
       errorMessage.textContent = error.message || 'An error occurred';
