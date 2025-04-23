@@ -10,16 +10,6 @@
       }
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/",
-      "dest": "/index.html"
-    }
-  ],
   "crons": [
     {
       "path": "/api/cron/process-jobs",
