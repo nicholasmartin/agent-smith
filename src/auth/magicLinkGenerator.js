@@ -20,60 +20,45 @@ const supabase = require('../supabaseClient');
 async function generateMagicLink(email, name, options = {}) {
   console.log(`[AUTH] Generating magic link for: ${email}`);
   
-  // Generate magic link according to Supabase documentation format
-  const { data, error } = await supabase.auth.admin.generateLink({
-    type: 'magiclink',
-    email: email,
-    options: {
-      // Use direct dashboard URL - client-side code will handle the auth
-      redirectTo: 'https://agent-smith.magloft.com/dashboard',
-      data: {
-        name: name,
-        source: options.source || 'agent_smith'
+  try {
+    // First, create a sign-in link using the signInWithOtp method
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: email,
+      options: {
+        // Use a direct dashboard URL
+        redirectTo: 'https://agent-smith.magloft.com/dashboard',
+        data: {
+          name: name,
+          source: options.source || 'agent_smith'
+        }
       }
+    });
+    
+    if (error) {
+      console.error(`[AUTH] Error generating magic link: ${error.message}`);
+      throw error;
     }
-  });
-  
-  // Log the full response for debugging
-  console.log(`[AUTH] Magic link generation response:`, JSON.stringify(data, null, 2));
-  
-  if (error) {
-    console.error(`[AUTH] Error generating magic link: ${error.message}`);
-    throw error;
+    
+    if (!data || !data.properties || !data.properties.action_link) {
+      console.error(`[AUTH] Invalid response structure:`, data);
+      throw new Error('Invalid response structure');
+    }
+    
+    const signInLink = data.properties.action_link;
+    console.log(`[AUTH] Generated magic link: ${signInLink}`);
+    
+    return signInLink;
+  } catch (error) {
+    console.error(`[AUTH] Exception generating magic link: ${error.message}`);
+    
+    // If magic link generation fails, create a fallback link that will work with client-side auth
+    // This is a direct link to the dashboard with instructions to sign in
+    const fallbackLink = `https://agent-smith.magloft.com/login?email=${encodeURIComponent(email)}&message=Please%20sign%20in%20to%20access%20your%20dashboard`;
+    
+    console.log(`[AUTH] Using fallback link: ${fallbackLink}`);
+    return fallbackLink;
   }
-  
-  // Extract the sign-in link from the response
-  // The Supabase API returns the link in data.properties.action_link
-  if (!data || !data.properties || !data.properties.action_link) {
-    console.error(`[AUTH] Magic link generation failed: Invalid response structure`, data);
-    throw new Error('Invalid magic link response structure');
-  }
-  
-  // Get the original link
-  let signInLink = data.properties.action_link;
-  console.log(`[AUTH] Original magic link: ${signInLink}`);
-  
-  // Verify the link is not null or undefined
-  if (!signInLink) {
-    console.error(`[AUTH] Magic link is null or undefined`);
-    throw new Error('Magic link is null or undefined');
-  }
-  
-  // Ensure the link has the required verification type parameter
-  // This fixes the "Verify requires a verification type" error
-  if (signInLink.includes('/verify?') && !signInLink.includes('&type=magiclink')) {
-    // Add the type parameter if it's missing
-    signInLink = signInLink.replace('/verify?', '/verify?type=magiclink&');
-  } else if (signInLink.includes('/verify?') && !signInLink.includes('type=')) {
-    // Add the type parameter if no type parameter exists
-    signInLink += '&type=magiclink';
-  }
-  
-  console.log(`[AUTH] Modified magic link: ${signInLink}`);
-  console.log(`[AUTH] Magic link generated successfully for ${email}`);
-  
-  
-  return signInLink;
 }
 
 module.exports = {
