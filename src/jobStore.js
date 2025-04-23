@@ -228,7 +228,17 @@ async function getJobById(jobId) {
     
     const { data, error } = await supabase
       .from('jobs')
-      .select('*')
+      .select(`
+        id,
+        status,
+        email,
+        domain,
+        created_at,
+        updated_at,
+        completed_at,
+        scrape_result,
+        scrape_job_id
+      `)
       .eq('id', jobId)
       .single();
 
