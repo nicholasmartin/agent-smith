@@ -7,7 +7,23 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const { createPagesServerClient } = require('@supabase/auth-helpers-nextjs');
+
+/**
+ * Initialize Supabase client for server-side use
+ * @returns {Object} Supabase client instance
+ */
+function initSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+}
 
 /**
  * Main authentication middleware that initializes the Supabase client
@@ -15,79 +31,100 @@ const { createPagesServerClient } = require('@supabase/auth-helpers-nextjs');
  */
 async function authMiddleware(req, res, next) {
   try {
-    // Create Supabase client with request context
-    const supabase = createPagesServerClient({ req, res });
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Create Supabase client
+    const supabase = initSupabase();
     
     // Attach to request for use in route handlers
     req.supabase = supabase;
     
+    // Get JWT from Authorization header or cookies
+    const jwt = extractJWT(req);
+    
+    if (jwt) {
+      // Set auth JWT for this request if available
+      supabase.auth.setAuth(jwt);
+    }
+    
     // Process continues - auth check happens in protected route middleware
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.redirect('/login');
+    console.error('[AUTH] Auth middleware error:', error);
+    res.redirect('/login.html');
   }
+}
+
+/**
+ * Extract JWT from request
+ * @param {Object} req - Express request object
+ * @returns {string|null} JWT token or null if not found
+ */
+function extractJWT(req) {
+  // Check Authorization header first
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  
+  // Then check cookies
+  if (req.cookies && req.cookies['sb-access-token']) {
+    return req.cookies['sb-access-token'];
+  }
+  
+  return null;
 }
 
 /**
  * Protected route middleware that checks if the user is authenticated
  * and redirects to login if not
  */
-function protectedRouteMiddleware(req, res, next) {
+async function protectedRouteMiddleware(req, res, next) {
   console.log('[AUTH] Checking authentication for protected route');
   
-  // First check for session cookies
-  const accessToken = req.cookies['sb-access-token'];
-  const refreshToken = req.cookies['sb-refresh-token'];
-  
-  // If we have cookies, try to use them
-  if (accessToken && refreshToken && req.supabase) {
-    console.log('[AUTH] Found session cookies, attempting to restore session');
+  try {
+    // Get user from Supabase
+    const { data: { user }, error } = await req.supabase.auth.getUser();
     
-    // Try to restore the session from cookies
-    req.supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken
-    })
-    .then(() => {
-      // Now check if the user is authenticated
-      return req.supabase.auth.getUser();
-    })
-    .then(({ data: { user }, error }) => {
-      if (error || !user) {
-        console.log('[AUTH] Session restoration failed, redirecting to login');
-        return res.redirect('/login');
-      }
-      // User is authenticated, continue
-      console.log('[AUTH] Session restored successfully');
-      req.user = user;
-      next();
-    })
-    .catch(error => {
-      console.error('[AUTH] Session restoration error:', error);
-      res.redirect('/login');
-    });
-  } else {
-    // No cookies, try normal authentication check
-    console.log('[AUTH] No session cookies found, checking normal auth');
+    if (error || !user) {
+      console.log('[AUTH] User not authenticated, redirecting to login');
+      return res.redirect('/login.html');
+    }
     
-    req.supabase.auth.getUser()
-      .then(({ data: { user }, error }) => {
-        if (error || !user) {
-          console.log('[AUTH] User not authenticated, redirecting to login');
-          return res.redirect('/login');
-        }
-        // User is authenticated, continue
-        console.log('[AUTH] User authenticated successfully');
-        req.user = user;
-        next();
-      })
-      .catch(error => {
-        console.error('[AUTH] Auth middleware error:', error);
-        res.redirect('/login');
-      });
+    // User is authenticated, attach to request and continue
+    console.log('[AUTH] User authenticated successfully:', user.email);
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('[AUTH] Protected route middleware error:', error);
+    res.redirect('/login.html');
   }
 }
 
-module.exports = { authMiddleware, protectedRouteMiddleware };
+/**
+ * API authentication middleware that checks if the user is authenticated
+ * and returns 401 if not
+ */
+async function apiAuthMiddleware(req, res, next) {
+  try {
+    // Get user from Supabase
+    const { data: { user }, error } = await req.supabase.auth.getUser();
+    
+    if (error || !user) {
+      console.log('[AUTH] API auth failed:', error?.message || 'No user found');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // User is authenticated, attach to request and continue
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('[AUTH] API auth middleware error:', error);
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+}
+
+module.exports = { 
+  authMiddleware, 
+  protectedRouteMiddleware,
+  apiAuthMiddleware,
+  initSupabase
+};

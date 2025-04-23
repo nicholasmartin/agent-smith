@@ -8,7 +8,8 @@ function setupSignupForm() {
   const form = document.getElementById('signup-form');
   const statusContainer = document.getElementById('form-status');
   const emailInput = document.getElementById('email');
-  const nameInput = document.getElementById('name');
+  const firstNameInput = document.getElementById('firstName');
+  const lastNameInput = document.getElementById('lastName');
   
   if (!form) return;
   
@@ -24,9 +25,10 @@ function setupSignupForm() {
     
     // Basic validation
     const email = emailInput.value.trim();
-    const name = nameInput.value.trim();
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
     
-    if (!email || !name) {
+    if (!email || !firstName || !lastName) {
       showStatus('error', 'Please fill in all fields');
       return;
     }
@@ -65,7 +67,8 @@ function setupSignupForm() {
         },
         body: JSON.stringify({
           email,
-          name
+          firstName,
+          lastName
         })
       });
       

@@ -151,20 +151,35 @@ async function processJob(job) {
       // Complete the job with email draft
       await jobStore.completeJobWithEmail(job.id, emailDraft);
       
-      // Check if we need to send the email with authentication link
-      // We'll send an email for all completed jobs that have a user_id
-      if (job.user_id && !job.email_sent) {
+      // Check if we need to send the email with signup link
+      // We'll send an email for all completed jobs that have invitation_pending=true
+      if (job.invitation_pending === true && !job.email_sent) {
         try {
-          console.log(`[Cron] Sending combined email to ${job.email} with AI content and optional auth`);
+          console.log(`[Cron] Sending combined email to ${job.email} with AI content and signup link`);
           
           // Determine if this job requires authentication (was it from the website?)
           const requiresAuth = job.from_website === true;
           
-          // Send email with AI content and optional auth link using the centralized delivery module
+          // Send email with AI content and signup link using the centralized delivery module
           const emailResult = await emailDelivery.sendJobCompletionEmail(job, emailDraft, requiresAuth);
           
           if (emailResult.success) {
             console.log(`[Cron] Combined email sent successfully to ${job.email}, ID: ${emailResult.emailId}`);
+            
+            // Update the trial record with the email sent timestamp if there's a trial_id in metadata
+            if (job.metadata?.trial_id) {
+              const supabase = require('../../src/supabaseClient');
+              const { error } = await supabase
+                .from('trials')
+                .update({ last_email_sent_at: new Date() })
+                .eq('id', job.metadata.trial_id);
+                
+              if (error) {
+                console.error(`[Cron] Error updating trial record: ${error.message}`);
+              } else {
+                console.log(`[Cron] Updated trial record ${job.metadata.trial_id} with email timestamp`);
+              }
+            }
           } else {
             console.error(`[Cron] Failed to send email to ${job.email}`);
           }

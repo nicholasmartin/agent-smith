@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Smith - Login</title>
+    <title>Agent Smith - Sign Up</title>
     <meta name="supabase-url" content="https://jnpdszffuosiirapfvwp.supabase.co">
     <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODE2MjM0NDIsImV4cCI6MTk5NzE5OTQ0Mn0.S23qyYgN3-Uuq6Iy_P-Qw0OUlpKh_WXnIl6c-1-43Vc">
     <link rel="stylesheet" href="css/base.css">
@@ -114,7 +114,6 @@
             padding: 12px;
             border-radius: 6px;
             font-size: 14px;
-            display: none;
         }
         
         .error {
@@ -135,36 +134,45 @@
             border: 1px solid rgba(59, 130, 246, 0.2);
         }
         
-        .forgot-password {
-            text-align: right;
-            margin-top: -12px;
-            margin-bottom: 16px;
+        .password-requirements {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
         }
         
-        .forgot-password a {
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 24px 0;
+        }
+        
+        .divider::before, .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background-color: var(--border-color);
+        }
+        
+        .divider span {
+            padding: 0 12px;
+            color: var(--text-muted);
             font-size: 14px;
-            color: var(--brand-color);
-            text-decoration: none;
         }
         
-        .forgot-password a:hover {
-            text-decoration: underline;
-        }
-        
-        .signup-link {
+        .login-link {
             text-align: center;
             margin-top: 24px;
             font-size: 14px;
             color: var(--text-muted);
         }
         
-        .signup-link a {
+        .login-link a {
             color: var(--brand-color);
             text-decoration: none;
             font-weight: 500;
         }
         
-        .signup-link a:hover {
+        .login-link a:hover {
             text-decoration: underline;
         }
     </style>
@@ -178,7 +186,7 @@
             <nav class="main-nav">
                 <ul>
                     <li><a href="index.html">Home</a></li>
-                    <li><a href="login.html" class="active">Login</a></li>
+                    <li><a href="login.html">Login</a></li>
                 </ul>
             </nav>
         </div>
@@ -187,11 +195,21 @@
     <main>
         <div class="auth-container">
             <div class="auth-header">
-                <h1>Welcome back</h1>
-                <p>Sign in to your Agent Smith account</p>
+                <h1>Create your account</h1>
+                <p>Get started with Agent Smith</p>
             </div>
             
-            <form id="login-form">
+            <form id="signup-form">
+                <div class="form-group">
+                    <label for="first-name">First Name</label>
+                    <input type="text" id="first-name" placeholder="Your first name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="last-name">Last Name</label>
+                    <input type="text" id="last-name" placeholder="Your last name" required>
+                </div>
+                
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" placeholder="Your email address" required>
@@ -199,20 +217,19 @@
                 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Your password" required>
+                    <input type="password" id="password" placeholder="Create a password" required>
+                    <div class="password-requirements">
+                        Password must be at least 6 characters
+                    </div>
                 </div>
                 
-                <div class="forgot-password">
-                    <a href="#" id="reset-password-link">Forgot password?</a>
-                </div>
+                <button type="submit" id="signup-btn">Sign Up</button>
                 
-                <button type="submit" id="login-btn">Sign In</button>
-                
-                <div id="login-status" class="status"></div>
+                <div id="signup-status" class="status" style="display: none;"></div>
             </form>
             
-            <div class="signup-link">
-                Don't have an account? <a href="signup.html">Sign up</a>
+            <div class="login-link">
+                Already have an account? <a href="login.html">Log in</a>
             </div>
         </div>
     </main>
@@ -225,10 +242,13 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('login-form');
-            const loginBtn = document.getElementById('login-btn');
-            const loginStatus = document.getElementById('login-status');
-            const resetPasswordLink = document.getElementById('reset-password-link');
+            const signupForm = document.getElementById('signup-form');
+            const signupBtn = document.getElementById('signup-btn');
+            const signupStatus = document.getElementById('signup-status');
+            const firstNameInput = document.getElementById('first-name');
+            const lastNameInput = document.getElementById('last-name');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
             
             // Check if user is already signed in
             window.supabase.auth.getSession().then(({ data: { session } }) => {
@@ -238,84 +258,78 @@
                 }
             });
             
-            // Parse URL parameters to pre-fill email field
+            // Parse URL parameters to pre-fill form fields
             const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('first_name')) {
+                firstNameInput.value = urlParams.get('first_name');
+            }
+            if (urlParams.has('last_name')) {
+                lastNameInput.value = urlParams.get('last_name');
+            }
             if (urlParams.has('email')) {
-                document.getElementById('email').value = urlParams.get('email');
+                emailInput.value = urlParams.get('email');
             }
             
-            // Handle login form submission
-            loginForm.addEventListener('submit', async (e) => {
+            // Handle signup form submission
+            signupForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
-                const email = document.getElementById('email').value.trim();
-                const password = document.getElementById('password').value;
+                const firstName = firstNameInput.value.trim();
+                const lastName = lastNameInput.value.trim();
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
                 
-                if (!email || !password) {
-                    showStatus('Please enter both email and password', 'error');
+                // Basic validation
+                if (!firstName || !lastName || !email || !password) {
+                    showStatus('Please fill in all fields', 'error');
+                    return;
+                }
+                
+                if (password.length < 6) {
+                    showStatus('Password must be at least 6 characters', 'error');
                     return;
                 }
                 
                 // Disable button and show loading state
-                loginBtn.disabled = true;
-                showStatus('Signing in...', 'info');
+                signupBtn.disabled = true;
+                showStatus('Creating your account...', 'info');
                 
                 try {
-                    const { error } = await window.supabase.auth.signInWithPassword({
+                    // Sign up with Supabase
+                    const { data, error } = await window.supabase.auth.signUp({
                         email,
-                        password
+                        password,
+                        options: {
+                            data: {
+                                first_name: firstName,
+                                last_name: lastName,
+                                full_name: `${firstName} ${lastName}`
+                            }
+                        }
                     });
                     
                     if (error) throw error;
                     
-                    // Redirect to dashboard on successful login
-                    window.location.href = '/dashboard';
+                    // Show success message
+                    showStatus('Account created! Please check your email for verification instructions.', 'success');
+                    
+                    // Clear form
+                    if (!urlParams.has('email')) {
+                        signupForm.reset();
+                    }
                 } catch (error) {
-                    console.error('Error signing in:', error);
-                    showStatus(error.message || 'Invalid email or password', 'error');
-                    loginBtn.disabled = false;
-                }
-            });
-            
-            // Add event listener for Enter key in password field
-            document.getElementById('password').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    loginBtn.click();
-                }
-            });
-            
-            // Handle password reset
-            resetPasswordLink.addEventListener('click', async (e) => {
-                e.preventDefault();
-                
-                const email = document.getElementById('email').value.trim();
-                
-                if (!email) {
-                    showStatus('Please enter your email address', 'error');
-                    return;
-                }
-                
-                try {
-                    showStatus('Sending password reset email...', 'info');
-                    
-                    const { error } = await window.supabase.auth.resetPasswordForEmail(email, {
-                        redirectTo: window.location.origin + '/reset-password'
-                    });
-                    
-                    if (error) throw error;
-                    
-                    showStatus('Password reset email sent. Please check your inbox.', 'success');
-                } catch (error) {
-                    console.error('Error sending reset email:', error);
-                    showStatus(error.message || 'Error sending reset email', 'error');
+                    console.error('Error signing up:', error);
+                    showStatus(error.message || 'Error creating account', 'error');
+                } finally {
+                    signupBtn.disabled = false;
                 }
             });
             
             // Helper function to show status messages
             function showStatus(message, type) {
-                loginStatus.textContent = message;
-                loginStatus.className = `status ${type}`;
-                loginStatus.style.display = 'block';
+                signupStatus.textContent = message;
+                signupStatus.className = `status ${type}`;
+                signupStatus.style.display = 'block';
             }
         });
     </script>

@@ -18,10 +18,14 @@ const { validateApiKey, validateWebsiteSecret } = require('../middleware/validat
 router.post('/website-signup', validateWebsiteSecret, async (req, res) => {
   console.log(`[Server] ENTER /api/website-signup handler. Request ID (if available): ${req.headers['x-vercel-id'] || 'N/A'}`); // Log entry
   try {
-    const { email, name } = req.body;
+    const { email, firstName, lastName } = req.body;
     
-    if (!email || !name) {
-      return res.status(400).json({ error: 'Email and name are required' });
+    // Validate required fields
+    if (!email || !firstName || !lastName) {
+      return res.status(400).json({ 
+        error: 'Email, first name, and last name are required',
+        missingFields: !email ? 'email' : !firstName ? 'firstName' : 'lastName'
+      });
     }
     
     // Validate email format
@@ -55,24 +59,56 @@ router.post('/website-signup', validateWebsiteSecret, async (req, res) => {
       return res.status(500).json({ error: 'Error processing website submission' });
     }
     
+    // Create a new trial record
+    const { data: trial, error: trialError } = await supabase
+      .from('trials')
+      .insert({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        has_registered: false
+      })
+      .select()
+      .single();
+    
+    if (trialError) {
+      console.error('Error creating trial record:', trialError);
+      return res.status(500).json({ error: 'Error creating trial record' });
+    }
+    
+    console.log(`[Server] Created trial record for ${firstName} ${lastName} (${email})`);
+    
     // Process the signup with Agent Smith company info
     const jobInfo = await emailProcessor.processSignup(
       email, 
-      name, 
+      `${firstName} ${lastName}`, 
       agentSmithCompany.default_api_key_id,
       agentSmithCompany.id,
-      true // fromWebsite flag
+      true, // fromWebsite flag
+      trial.id // Pass the trial ID
     );
     
-    console.log(`[Server] Website form submission processed, Job ID: ${jobInfo.jobId}`);
+    // Update the trial record with the job ID
+    const { error: updateError } = await supabase
+      .from('trials')
+      .update({ job_id: jobInfo.jobId })
+      .eq('id', trial.id);
+    
+    if (updateError) {
+      console.error('Error updating trial record with job ID:', updateError);
+      // Continue anyway since the trial record was created
+    }
+    
+    console.log(`[Server] Website form submission processed, Job ID: ${jobInfo.jobId}, Trial ID: ${trial.id}`);
     
     // Return job information to the client
     return res.status(202).json({ 
       message: 'Signup received and being processed',
       email,
-      name,
+      firstName,
+      lastName,
       jobId: jobInfo.jobId,
-      scrapeJobId: jobInfo.scrapeJobId,
+      trialId: trial.id,
       status: jobInfo.status
     });
   } catch (error) {

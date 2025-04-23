@@ -2,6 +2,16 @@
  * Styles for form status messages and job tracking notifications
  */
 
+/* Split Form Row */
+.form-row-split {
+  display: flex;
+  gap: 10px;
+}
+
+.form-row-split input {
+  flex: 1;
+}
+
 /* Form Status Messages */
 .form-status {
   margin: 15px 0;

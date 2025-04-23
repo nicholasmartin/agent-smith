@@ -13,14 +13,11 @@ const express_rate_limit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 
 // Import middleware
-const { authMiddleware } = require('./src/middleware/auth');
+const { authMiddleware, protectedRouteMiddleware, apiAuthMiddleware } = require('./src/middleware/auth');
 
 // Import route modules
-const authRoutes = require('./src/routes/auth');
 const dashboardRoutes = require('./src/routes/dashboard');
 const apiRoutes = require('./src/routes/api');
-const createPasswordRoute = require('./src/routes/auth/create-password');
-const loginRoute = require('./src/routes/auth/login');
 
 // Initialize Express app
 const app = express();
@@ -44,24 +41,19 @@ app.use((req, res, next) => {
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Password-based auth routes - no auth middleware needed for these
-app.use('/api/auth/create-password', createPasswordRoute);
-app.use('/api/auth/login', loginRoute);
+// Initialize Supabase client for each request
+app.use(authMiddleware);
 
-// Create password page route
-app.get('/create-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'create-password.html'));
+// Dashboard routes - Apply protectedRouteMiddleware for authentication check
+app.use('/dashboard', protectedRouteMiddleware, dashboardRoutes);
+
+// Handle all dashboard paths to serve the dashboard.html file
+app.get('/dashboard*', protectedRouteMiddleware, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// Apply route modules
-// Public/Auth routes (login page, etc.) - No authMiddleware needed here
-app.use('/', authRoutes); 
-
-// Dashboard routes - Apply authMiddleware here
-app.use('/dashboard', authMiddleware, dashboardRoutes);
-
-// API routes - Apply authMiddleware here
-app.use('/api', authMiddleware, apiRoutes);
+// API routes - Some endpoints require authentication, handled in the route file
+app.use('/api', apiRoutes);
 
 // Serve the WEBSITE_FORM_SECRET as a JavaScript variable
 app.get('/js/config.js', (req, res) => {
