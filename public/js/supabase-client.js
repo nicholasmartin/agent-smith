@@ -103,17 +103,77 @@ window.supabase = initSupabase();
 if (window.supabase) {
   // Flag to check if the initial URL had auth hash parameters
   let initialUrlHadAuthHash = false;
+  let authHashParams = null;
+  
+  // Check if URL contains authentication hash parameters
   if (window.location.hash) {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     initialUrlHadAuthHash = hashParams.has('access_token') || hashParams.has('refresh_token') || hashParams.has('type');
+    
     if (initialUrlHadAuthHash) {
-       console.log('[AUTH] Initial URL contains auth hash parameters.');
+      console.log('[AUTH] Initial URL contains auth hash parameters.');
+      authHashParams = {};
+      
+      // Store auth parameters for later use
+      for (const [key, value] of hashParams.entries()) {
+        authHashParams[key] = value;
+      }
+      
+      // Immediately clean URL to prevent double token consumption
+      const cleanUrl = window.location.href.split('#')[0];
+      console.log('[AUTH] Cleaning URL hash to prevent double token consumption...');
+      window.history.replaceState({}, document.title, cleanUrl);
     }
   }
 
   // Flag to prevent multiple redirect attempts
   let hasRedirected = false;
 
+  // Add a delay function to give Supabase time to establish the session
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  // Handle magic link authentication
+  async function handleMagicLinkAuth() {
+    console.log('[AUTH] Handling magic link authentication...');
+    
+    if (initialUrlHadAuthHash && !hasRedirected) {
+      hasRedirected = true; // Set flag immediately to prevent multiple redirects
+      
+      try {
+        // Give Supabase time to establish the session
+        console.log('[AUTH] Waiting for session establishment...');
+        await delay(1000); // 1 second delay
+        
+        // Verify session is established
+        const { data: { session: currentSession }, error } = await window.supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[AUTH] Error getting session:', error);
+          return;
+        }
+        
+        if (currentSession) {
+          console.log('[AUTH] Session established successfully, redirecting to dashboard...');
+          window.location.href = '/dashboard';
+        } else {
+          console.error('[AUTH] Failed to establish session after delay');
+          // If we're on login page, no need to redirect
+          if (!window.location.pathname.includes('login')) {
+            window.location.href = '/login';
+          }
+        }
+      } catch (error) {
+        console.error('[AUTH] Error during magic link authentication:', error);
+        hasRedirected = false; // Reset flag to allow another attempt
+      }
+    }
+  }
+  
+  // Process magic link parameters immediately if present
+  if (initialUrlHadAuthHash) {
+    handleMagicLinkAuth();
+  }
+  
   window.supabase.auth.onAuthStateChange(async (event, session) => {
     console.log('[AUTH] onAuthStateChange event:', event, 'Session:', !!session);
 
@@ -122,21 +182,7 @@ if (window.supabase) {
 
       // If sign-in happened and the initial URL had the hash, redirect to dashboard (only once)
       if (initialUrlHadAuthHash && !hasRedirected) {
-        hasRedirected = true; // Set flag immediately
-        console.log('[AUTH] Initial URL had hash and not redirected yet. Attempting redirect to /dashboard...');
-        
-        try {
-          const cleanUrl = window.location.href.split('#')[0];
-          console.log('[AUTH] Cleaning URL hash...');
-          window.history.replaceState({}, document.title, cleanUrl);
-          console.log('[AUTH] Executing redirect to /dashboard...');
-          window.location.href = '/dashboard';
-          return; // Exit listener function after initiating redirect
-        } catch (redirectError) {
-            console.error('[AUTH] Error during redirect:', redirectError);
-            // Potentially revert flag if redirect fails catastrophically?
-            // hasRedirected = false; 
-        }
+        handleMagicLinkAuth();
       }
       
       // Handle case where user is already logged in and visits login page
