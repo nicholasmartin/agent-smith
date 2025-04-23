@@ -6,18 +6,11 @@ const jobStore = require('../../src/jobStore');
 const webScraper = require('../../src/webScraper');
 const emailGenerator = require('../../src/emailGenerator');
 const emailDelivery = require('../../src/emailDelivery');
-const slackNotifier = require('../../src/slackNotifier');
-const { createClient } = require('@supabase/supabase-js');
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * Process a batch of pending jobs
  */
-async function processJobs(req, res) {
+async function processJobs() {
   try {
     console.log('Cron job started: processing pending jobs');
     
@@ -48,8 +41,6 @@ async function processJobs(req, res) {
           
           if (updatedJob.retry_count >= 3) {
             await jobStore.markJobAsFailed(job.id, error.message);
-            // Remove Slack notification for failures
-            // await slackNotifier.sendScrapingFailureToSlack(job.domain, error.message);
             console.log(`[Cron] Job ${job.id} for ${job.domain} failed after ${updatedJob.retry_count} retries: ${error.message}`);
             
             results.push({
