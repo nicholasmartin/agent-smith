@@ -6,19 +6,38 @@
 // Initialize Supabase client
 function initSupabase() {
   try {
-    // First check for environment variables in meta tags
-    let supabaseUrl = document.querySelector('meta[name="supabase-url"]')?.content;
-    let supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]')?.content;
-    
-    // If not found in meta tags, check for global variables (useful for development)
-    if (!supabaseUrl || !supabaseAnonKey) {
-      if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined') {
-        supabaseUrl = SUPABASE_URL;
-        supabaseAnonKey = SUPABASE_ANON_KEY;
-      } else {
-        console.error('Supabase configuration not found');
-        return null;
+    // First check if we already have a directly initialized client
+    if (window.supabaseClient) {
+      console.log('[AUTH] Using pre-initialized Supabase client');
+      const client = window.supabaseClient;
+      
+      // Add helper methods to the client if not already added
+      if (!client._enhanced) {
+        enhanceClient(client);
       }
+      
+      return client;
+    }
+    
+    // Otherwise, initialize from scratch
+    // Get Supabase URL and anon key from meta tags
+    let supabaseUrl = '';
+    let supabaseAnonKey = '';
+    
+    // Try to get from meta tags first
+    const urlMeta = document.querySelector('meta[name="supabase-url"]');
+    const keyMeta = document.querySelector('meta[name="supabase-anon-key"]');
+    
+    if (urlMeta && keyMeta) {
+      supabaseUrl = urlMeta.content;
+      supabaseAnonKey = keyMeta.content;
+    } else if (window.AGENT_SMITH_CONFIG) {
+      // Fall back to global config if available
+      supabaseUrl = window.AGENT_SMITH_CONFIG.supabaseUrl;
+      supabaseAnonKey = window.AGENT_SMITH_CONFIG.supabaseAnonKey;
+    } else {
+      console.error('Could not find Supabase configuration');
+      return null;
     }
     
     // Create and return the Supabase client
@@ -26,19 +45,14 @@ function initSupabase() {
     
     // Check which version of Supabase is loaded
     let client;
-    if (typeof supabase !== 'undefined' && typeof supabase.createClient === 'function') {
-      // Direct global supabase object with createClient method
+    
+    // Try the global supabase object from the CDN
+    if (typeof supabase === 'object' && typeof supabase.createClient === 'function') {
+      console.log('[AUTH] Using global supabase object');
       client = supabase.createClient(supabaseUrl, supabaseAnonKey);
-    } else if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
-      // Window-scoped supabase object
-      client = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
-    } else if (typeof window.supabaseJs !== 'undefined') {
-      // Legacy naming
-      client = window.supabaseJs.createClient(supabaseUrl, supabaseAnonKey);
     } else {
-      // Try to use the @supabase/supabase-js module if available
-      console.log('[AUTH] Trying to use @supabase/supabase-js module');
-      client = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+      console.error('[AUTH] Supabase library not properly loaded');
+      return null;
     }
     
     // Add helper methods to the client
@@ -57,6 +71,9 @@ function initSupabase() {
  */
 function enhanceClient(client) {
   if (!client) return;
+  
+  // Mark the client as enhanced
+  client._enhanced = true;
   
   // Check if user is authenticated
   client.isAuthenticated = async function() {
@@ -111,47 +128,31 @@ function enhanceClient(client) {
     }
     return true;
   };
-}
-
-// Make Supabase client available globally
-window.supabase = initSupabase();
-
-// Use onAuthStateChange for reactive session handling
-if (window.supabase) {
   
-  window.supabase.auth.onAuthStateChange(async (event, session) => {
+  // Add onAuthStateChange listener
+  client.auth.onAuthStateChange((event, session) => {
     console.log('[AUTH] onAuthStateChange event:', event, 'Session:', !!session);
-
-    if (event === 'SIGNED_IN' && session) {
-      console.log('[AUTH] User signed in.');
-      
-      // Handle case where user is already logged in and visits login page
-      if (window.location.pathname === '/login.html') {
-         console.log('[AUTH] User already signed in, redirecting from login page to dashboard.');
-         window.location.href = '/dashboard';
-         return;
-      }
-
+    
+    // Handle auth state changes
+    if (event === 'SIGNED_IN') {
+      console.log('[AUTH] User signed in');
     } else if (event === 'SIGNED_OUT') {
-      console.log('[AUTH] User signed out.');
-      // Redirect to login if on a protected page after sign out
-      // Note: Server-side middleware is primary protection
-      // if (isProtectedRoute(window.location.pathname)) {
-      //    window.location.href = '/login.html';
-      // }
+      console.log('[AUTH] User signed out');
+      // Redirect to login page if on a protected route
+      checkProtectedRoute();
+    } else if (event === 'USER_UPDATED') {
+      console.log('[AUTH] User updated');
     } else if (event === 'INITIAL_SESSION') {
-       console.log('[AUTH] Initial session loaded:', !!session);
-       // Handle case where user has existing session and visits login page
-       if (session && window.location.pathname === '/login.html') {
-          console.log('[AUTH] User has existing session, redirecting from login page to dashboard.');
-          window.location.href = '/dashboard';
-          return;
-       }
+      console.log('[AUTH] Initial session loaded:', !!session);
+      // Handle case where user has existing session and visits login page
+      if (session && window.location.pathname === '/login.html') {
+        console.log('[AUTH] User has existing session, redirecting from login page to dashboard.');
+        window.location.href = '/dashboard';
+        return;
+      }
     }
     // Add handling for other events like TOKEN_REFRESHED if needed
   });
-} else {
-  console.error('[AUTH] Supabase client not initialized, cannot set up auth listener.');
 }
 
 // Function to check if user is on a protected route - might still be useful for UI elements
@@ -163,9 +164,9 @@ async function checkProtectedRoute() {
   const needsLogin = !session && isProtectedRoute(window.location.pathname);
 
   if (needsLogin) {
-     console.warn('[AUTH] Client check: No session on protected route.');
-     // Optionally hide/show UI elements, but avoid client-side redirects here
-     // window.location.href = '/login.html'; 
+    console.warn('[AUTH] Client check: No session on protected route.');
+    // Optionally hide/show UI elements, but avoid client-side redirects here
+    // window.location.href = '/login.html'; 
   }
 }
 
@@ -176,6 +177,9 @@ function isProtectedRoute(pathname) {
   if (pathname === '/dashboard.html') return true;
   return protectedPaths.some(path => pathname.startsWith(path));
 }
+
+// Make the Supabase client available globally
+window.supabase = window.supabaseClient || initSupabase();
 
 // Call checkProtectedRoute on DOM load for any initial UI adjustments needed
 document.addEventListener('DOMContentLoaded', checkProtectedRoute);

@@ -23,11 +23,18 @@
   <!-- Sentry Error Tracking - Load before other scripts -->
   <script src="js/sentry-client.js"></script>
   
-  <!-- Supabase - Load specific version for compatibility -->
+  <!-- Supabase - Direct initialization approach -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
   <script>
-    // Ensure the global supabase object is available
-    window.supabase = window.supabase || {};
+    // Direct initialization of Supabase client
+    const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
+    const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
+    
+    // Create the client directly
+    if (typeof supabaseClient === 'undefined') {
+      console.log('[DASHBOARD] Creating Supabase client directly');
+      window.supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    }
   </script>
   <script src="js/supabase-client.js"></script>
   
@@ -40,11 +47,10 @@
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('[DASHBOARD] Page loaded, checking authentication...');
       
-      // Initialize Supabase client
-      window.supabase = initSupabase();
-      
+      // Use the Supabase client that was initialized in supabase-client.js
+      // The client is already available as window.supabase
       if (!window.supabase) {
-        console.error('[DASHBOARD] Failed to initialize Supabase client');
+        console.error('[DASHBOARD] No Supabase client available');
         return;
       }
       
