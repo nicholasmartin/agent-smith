@@ -9,7 +9,6 @@ const express = require('express');
 const router = express.Router();
 const { createUserWithPassword } = require('../../auth/passwordAuth');
 const { getJobById } = require('../../jobStore');
-const supabase = require('../../supabaseClient');
 
 // Make sure we're using the correct route path
 router.post('/', async (req, res) => {
@@ -64,10 +63,16 @@ router.post('/', async (req, res) => {
     } catch (error) {
       console.error(`[AUTH] Error in user creation/update: ${error.message}`);
       
+      // Handle specific error cases
       if (error.message.includes('already registered') || error.message.includes('already exists')) {
         return res.status(409).json({ 
           error: 'A user with this email already exists. Please try signing in with your password.',
           code: 'user_exists'
+        });
+      } else if (error.message.includes('password')) {
+        return res.status(400).json({ 
+          error: 'Password does not meet requirements. Please use at least 6 characters.',
+          code: 'invalid_password'
         });
       }
       

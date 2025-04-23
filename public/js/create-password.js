@@ -41,7 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       // Create user account with password
       console.log('Submitting password creation request...');
-      const response = await fetch('/api/auth/create-password', {
+      // Get the base URL from the current location
+      const baseUrl = window.location.origin;
+      const response = await fetch(`${baseUrl}/api/auth/create-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -56,11 +58,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
       
       if (!response.ok) {
-        // Special handling for user already exists error
+        // Special handling for different error types
         if (response.status === 409 && data.code === 'user_exists') {
           // User already exists, show message and try to sign in directly
           successMessage.textContent = 'Account already exists. Attempting to sign in...';
           successMessage.classList.remove('hidden');
+        } else if (response.status === 400 && data.code === 'invalid_password') {
+          // Password doesn't meet requirements
+          throw new Error('Password must be at least 6 characters long');
+        } else if (response.status === 404) {
+          // Job not found
+          throw new Error('Job information not found. Please contact support.');
         } else {
           throw new Error(data.error || 'Failed to create password');
         }

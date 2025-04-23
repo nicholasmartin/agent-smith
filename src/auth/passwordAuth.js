@@ -4,6 +4,21 @@
  * This module provides a centralized place for handling password authentication.
  */
 
+const { createClient } = require('@supabase/supabase-js');
+
+// Create a Supabase client with the service role key for admin operations
+const adminSupabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
+
+// Regular client for non-admin operations
 const supabase = require('../supabaseClient');
 
 /**
@@ -17,17 +32,26 @@ const supabase = require('../supabaseClient');
 async function createUserWithPassword(email, password, metadata = {}) {
   console.log(`[AUTH] Creating user account for: ${email}`);
   
-  // Check if user already exists
   try {
-    const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
+    // First, check if the user already exists using admin API
+    console.log(`[AUTH] Checking if user exists: ${email}`);
+    const { data: existingUser, error: getUserError } = await adminSupabase.auth.admin.getUserByEmail(email);
+    
+    if (getUserError && !getUserError.message.includes('not found')) {
+      console.error(`[AUTH] Error checking user existence: ${getUserError.message}`);
+      throw getUserError;
+    }
     
     if (existingUser) {
-      console.log(`[AUTH] User already exists for email: ${email}, updating password`);
+      console.log(`[AUTH] User already exists, updating password: ${email}`);
       
-      // Update existing user's password
-      const { data: updatedUser, error: updateError } = await supabase.auth.admin.updateUserById(
+      // User exists, update their password
+      const { data: updatedUser, error: updateError } = await adminSupabase.auth.admin.updateUserById(
         existingUser.id,
-        { password: password, user_metadata: metadata }
+        { 
+          password,
+          user_metadata: metadata
+        }
       );
       
       if (updateError) {
@@ -35,28 +59,29 @@ async function createUserWithPassword(email, password, metadata = {}) {
         throw updateError;
       }
       
-      console.log(`[AUTH] User password updated successfully for: ${email}`);
+      console.log(`[AUTH] User password updated successfully: ${email}`);
       return updatedUser;
+    } else {
+      // User doesn't exist, create a new one
+      console.log(`[AUTH] User doesn't exist, creating new account: ${email}`);
+      
+      const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: metadata
+      });
+      
+      if (createError) {
+        console.error(`[AUTH] Error creating user: ${createError.message}`);
+        throw createError;
+      }
+      
+      console.log(`[AUTH] User created successfully: ${email}`);
+      return newUser;
     }
-  } catch (checkError) {
-    // If error is not related to user not found, rethrow it
-    if (!checkError.message.includes('not found')) {
-      throw checkError;
-    }
-    // Otherwise continue with user creation
-    console.log(`[AUTH] User does not exist, creating new account`);
-  }
-  
-  // Create new user
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true, // Auto-confirm email
-    user_metadata: metadata
-  });
-  
-  if (error) {
-    console.error(`[AUTH] Error creating user: ${error.message}`);
+  } catch (error) {
+    console.error(`[AUTH] Error in user management: ${error.message}`);
     throw error;
   }
   
