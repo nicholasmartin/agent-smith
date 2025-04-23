@@ -52,6 +52,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Initialize Supabase client for each request
 app.use(authMiddleware);
 
+// Special route for auth callback - must be before protected routes
+app.get('/auth-callback.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auth-callback.html'));
+});
+
 // Dashboard routes - Apply protectedRouteMiddleware for authentication check
 app.use('/dashboard', protectedRouteMiddleware, dashboardRoutes);
 
