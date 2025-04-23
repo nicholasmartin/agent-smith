@@ -111,20 +111,32 @@ if (window.supabase) {
     }
   }
 
+  // Flag to prevent multiple redirect attempts
+  let hasRedirected = false;
+
   window.supabase.auth.onAuthStateChange(async (event, session) => {
     console.log('[AUTH] onAuthStateChange event:', event, 'Session:', !!session);
 
     if (event === 'SIGNED_IN' && session) {
       console.log('[AUTH] User signed in.');
 
-      // If sign-in happened and the initial URL had the hash, redirect to dashboard
-      if (initialUrlHadAuthHash) {
-        console.log('[AUTH] Redirecting to dashboard after magic link sign-in.');
-        const cleanUrl = window.location.href.split('#')[0];
-        // Use replaceState to clean URL *before* redirecting to avoid history issues
-        window.history.replaceState({}, document.title, cleanUrl);
-        window.location.href = '/dashboard';
-        return; // Prevent further checks after redirect
+      // If sign-in happened and the initial URL had the hash, redirect to dashboard (only once)
+      if (initialUrlHadAuthHash && !hasRedirected) {
+        hasRedirected = true; // Set flag immediately
+        console.log('[AUTH] Initial URL had hash and not redirected yet. Attempting redirect to /dashboard...');
+        
+        try {
+          const cleanUrl = window.location.href.split('#')[0];
+          console.log('[AUTH] Cleaning URL hash...');
+          window.history.replaceState({}, document.title, cleanUrl);
+          console.log('[AUTH] Executing redirect to /dashboard...');
+          window.location.href = '/dashboard';
+          return; // Exit listener function after initiating redirect
+        } catch (redirectError) {
+            console.error('[AUTH] Error during redirect:', redirectError);
+            // Potentially revert flag if redirect fails catastrophically?
+            // hasRedirected = false; 
+        }
       }
       
       // Handle case where user is already logged in and visits login page
