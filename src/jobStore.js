@@ -240,10 +240,7 @@ async function getJobById(jobId) {
         scrape_result,
         scrape_job_id,
         company_id,
-        user_id,
-        invitation_pending,
-        email_sent,
-        retry_count
+        user_id
       `)
       .eq('id', jobId)
       .single();
