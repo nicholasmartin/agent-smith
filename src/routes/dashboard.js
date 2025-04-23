@@ -8,11 +8,8 @@ const express = require('express');
 const path = require('path');
 const router = express.Router();
 
-// Import middleware
-const { protectedRouteMiddleware } = require('../middleware/auth');
-
-// All dashboard routes are protected by default
-router.use(protectedRouteMiddleware);
+// The protectedRouteMiddleware is now applied in server.js
+// We don't need to apply it again here
 
 // Main dashboard route
 router.get('/', (req, res) => {
