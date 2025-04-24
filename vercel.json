@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "npm run build && echo 'Webpack build completed'",
-  "outputDirectory": ".", 
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
   "builds": [
     {
       "src": "server.js",
