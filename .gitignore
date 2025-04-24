@@ -24,6 +24,7 @@ build/
 out/
 .next/
 .netlify/
+public/js/bundled/
 
 # Coverage directory used by tools like istanbul
 coverage/
