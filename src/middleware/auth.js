@@ -122,6 +122,5 @@ async function apiAuthMiddleware(req, res, next) {
 module.exports = { 
   authMiddleware, 
   protectedRouteMiddleware,
-  apiAuthMiddleware,
-  initSupabase
+  apiAuthMiddleware
 };
