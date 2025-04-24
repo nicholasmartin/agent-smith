@@ -5,17 +5,13 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["dist/**", "api/**"],
-        "buildCommand": "npm run build",
+        "includeFiles": ["src/**", "api/**", "public/**"],
         "memory": 1024,
         "maxDuration": 60
       }
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
     }
   ],
+  "buildCommand": "npm run build",
   "routes": [
     { "src": "/auth/callback", "dest": "/server.js" },
     { "src": "/api/(.*)", "dest": "/server.js" },
