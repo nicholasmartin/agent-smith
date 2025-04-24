@@ -5,10 +5,14 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["src/**", "api/**", "public/**"],
+        "includeFiles": ["src/**", "api/**"],
         "memory": 1024,
         "maxDuration": 60
       }
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "buildCommand": "npm run build",
@@ -17,6 +21,9 @@
     { "src": "/api/(.*)", "dest": "/server.js" },
     { "src": "/dashboard", "dest": "/server.js" },
     { "src": "/dashboard/(.*)", "dest": "/server.js" },
+    { "src": "/css/(.*)", "dest": "/public/css/$1" },
+    { "src": "/js/(.*)", "dest": "/public/js/$1" },
+    { "src": "/images/(.*)", "dest": "/public/images/$1" },
     { "src": "/(.*\\.(js|css|ico|jpg|jpeg|png|svg|webp|html))", "dest": "/public/$1" },
     { "src": "/(.*)", "dest": "/server.js" }
   ],
