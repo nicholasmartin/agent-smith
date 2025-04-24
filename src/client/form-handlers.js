@@ -85,7 +85,7 @@ function initializeFormHandlers() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Website-Form-Secret': formSecret || '',
+          'X-Website-Secret': formSecret || '',
           'X-CSRF-Token': csrfToken || ''
         },
         body: JSON.stringify(data)

@@ -17,17 +17,16 @@ const { validateApiKey, validateWebsiteSecret } = require('../middleware/validat
 
 // Form configuration endpoint - provides necessary client-side configuration
 router.get('/form-config', (req, res) => {
-  // Generate a CSRF token for the session if one doesn't exist
-  if (!req.session?.csrfToken) {
-    req.session = req.session || {};
-    req.session.csrfToken = crypto.randomBytes(16).toString('hex');
-  }
+  // Generate a random CSRF token - no session dependency
+  const csrfToken = crypto.randomBytes(16).toString('hex');
   
   // Return the configuration
   res.json({
     websiteFormSecret: process.env.WEBSITE_FORM_SECRET || '',
-    csrfToken: req.session.csrfToken || ''
+    csrfToken: csrfToken
   });
+  
+  console.log('Form config endpoint called successfully');
 });
 
 // Set auth cookie endpoint - sets authentication cookies from Supabase tokens
