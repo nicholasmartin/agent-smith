@@ -1,14 +1,15 @@
 {
   "version": 2,
+  "buildCommand": "npm run build && echo 'Webpack build completed'",
+  "outputDirectory": ".", 
   "builds": [
     {
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["src/**", "api/**", "package.json", "package-lock.json", "babel.config.json", "webpack.config.js"],
+        "includeFiles": ["src/**", "api/**", "package.json", "package-lock.json", "babel.config.json", "webpack.config.js", "public/js/bundled/**"],
         "memory": 1024,
-        "maxDuration": 60,
-        "buildCommand": "npm run build"
+        "maxDuration": 60
       }
     },
     {
