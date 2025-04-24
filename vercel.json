@@ -2,12 +2,13 @@
   "version": 2,
   "builds": [
     {
-      "src": "server.js",
+      "src": "package.json",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["src/**", "api/**"],
+        "includeFiles": ["src/**", "api/**", "public/**"],
         "memory": 1024,
-        "maxDuration": 60
+        "maxDuration": 60,
+        "buildCommand": "npm run build"
       }
     },
     {
@@ -15,7 +16,6 @@
       "use": "@vercel/static"
     }
   ],
-  "buildCommand": "npm run build",
   "routes": [
     { "src": "/auth/callback", "dest": "/server.js" },
     { "src": "/api/(.*)", "dest": "/server.js" },
