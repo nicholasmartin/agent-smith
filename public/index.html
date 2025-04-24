@@ -18,7 +18,8 @@
     <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MTYxNTMsImV4cCI6MjA1OTM5MjE1M30._y12tD3iyz2g6IuUbokPPNM6_3SfcnkbCnJP0CGeef4">
     <meta name="website-form-secret" content="form-secret-placeholder">
     <meta name="csrf-token" content="">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Using bundled scripts instead of CDN for better reliability -->
+    <script src="js/bundled/form-handlers.js"></script>
 </head>
 <body>
     <header>
@@ -565,20 +566,11 @@
         </div>
     </footer>
 
-    <!-- Load our form handlers and authentication scripts -->    
-    <script src="/js/config.js"></script> <!-- Load dynamic configuration first -->
-    <script src="/js/form-config.js"></script> <!-- Load form configuration from server -->
+    <!-- Form handlers and authentication are now handled through bundled JavaScript -->
+    <!-- All scripts now provided through bundled JavaScript -->
     <script>
-      // Debug validation for config loading
-      window.addEventListener('load', function() {
-        console.log('DEBUG: Config loaded:', !!window.AGENT_SMITH_CONFIG);
-        if (!window.AGENT_SMITH_CONFIG) {
-          console.error('WARNING: Agent Smith config not properly loaded!');
-        }
-      });
+      // Form handlers are loaded from the bundled JavaScript
+      console.log('Agent Smith homepage loaded');
     </script>
-    <script src="js/supabase-client.js"></script> <!-- Load Supabase client and main listener -->
-    <script src="js/form-handlers.js"></script>
-    <script src="js/supabase-auth.js"></script> <!-- Load signup-specific logic -->
 </body>
 </html>

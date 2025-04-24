@@ -5,7 +5,8 @@ module.exports = {
     login: './src/client/login.js',
     signup: './src/client/signup.js',
     'auth-callback': './src/client/auth-callback.js',
-    dashboard: './src/client/dashboard.js'
+    dashboard: './src/client/dashboard.js',
+    'form-handlers': './src/client/form-handlers.js'
   },
   output: {
     filename: '[name].bundle.js',
