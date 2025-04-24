@@ -32,7 +32,7 @@ function initSupabase() {
 async function authMiddleware(req, res, next) {
   try {
     // Get JWT from Authorization header or cookies
-    const jwt = extractJWT(req);
+    const jwt = await extractJWT(req);
     
     // Get the anon key from either SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY
     const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -91,7 +91,7 @@ async function authMiddleware(req, res, next) {
  * @param {Object} req - Express request object
  * @returns {string|null} JWT token or null if not found
  */
-function extractJWT(req) {
+async function extractJWT(req) {
   // Debug: Log all cookies
   console.log('[AUTH] Available cookies:', Object.keys(req.cookies || {}));
   
@@ -130,6 +130,35 @@ function extractJWT(req) {
       }
     }
     
+    // Check for refresh token - we can use this to get an access token
+    if (req.cookies['sb-refresh-token']) {
+      console.log('[AUTH] Found refresh token, attempting to exchange for access token');
+      try {
+        // Create a temporary Supabase client to exchange the refresh token
+        const tempClient = createClient(
+          process.env.SUPABASE_URL,
+          process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+        
+        // Set the refresh token in the client
+        const { data, error } = await tempClient.auth.refreshSession({
+          refresh_token: req.cookies['sb-refresh-token']
+        });
+        
+        if (error) {
+          console.error('[AUTH] Error refreshing session:', error.message);
+          return null;
+        }
+        
+        if (data && data.session && data.session.access_token) {
+          console.log('[AUTH] Successfully refreshed access token');
+          return data.session.access_token;
+        }
+      } catch (e) {
+        console.error('[AUTH] Error exchanging refresh token:', e);
+      }
+    }
+    
     // Last resort: check for any cookie that might contain auth data
     for (const key in req.cookies) {
       if (key.startsWith('sb-') && key.includes('auth')) {
@@ -158,7 +187,7 @@ async function protectedRouteMiddleware(req, res, next) {
   
   try {
     // Get JWT from request
-    const jwt = extractJWT(req);
+    const jwt = await extractJWT(req);
     console.log('[AUTH] JWT found:', !!jwt);
     
     if (!jwt) {
