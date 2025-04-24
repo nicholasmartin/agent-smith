@@ -23,88 +23,9 @@
   <!-- Sentry Error Tracking - Load before other scripts -->
   <script src="js/sentry-client.js"></script>
   
-  <!-- Supabase - Direct initialization approach -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
-  <script>
-    // Direct initialization of Supabase client
-    const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
-    const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
-    
-    // Create the client directly
-    if (typeof supabaseClient === 'undefined') {
-      console.log('[DASHBOARD] Creating Supabase client directly');
-      window.supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
-    }
-  </script>
-  <script src="js/supabase-client.js"></script>
-  
-  <!-- Authentication Utilities - Load before dashboard.js -->
-  <script src="js/auth.js"></script>
-  
-  <!-- Authentication Handler Script -->
-  <script>
-    // Immediately check authentication status on page load
-    document.addEventListener('DOMContentLoaded', async () => {
-      console.log('[DASHBOARD] Page loaded, checking authentication...');
-      
-      // Use the Supabase client that was initialized in supabase-client.js
-      // The client is already available as window.supabase
-      if (!window.supabase) {
-        console.error('[DASHBOARD] No Supabase client available');
-        return;
-      }
-      
-      try {
-        // First check if we're server-side authenticated by making a request to our debug endpoint
-        // This prevents unnecessary redirects if server-side auth is working but client-side session is missing
-        console.log('[DASHBOARD] Checking server-side authentication first...');
-        const serverAuthResponse = await fetch('/api/debug-auth', {
-          credentials: 'include' // Important for cookies
-        });
-        
-        const serverAuthData = await serverAuthResponse.json();
-        console.log('[DASHBOARD] Server auth check result:', serverAuthData);
-        
-        if (serverAuthData.authenticated) {
-          console.log('[DASHBOARD] Server-side authentication successful, proceeding with dashboard');
-          // We're authenticated on the server, so we can safely stay on the dashboard
-          // Try to set up the client-side session for consistency
-          try {
-            // Check if we already have a client-side session
-            const { data: { session } } = await window.supabase.auth.getSession();
-            
-            if (!session) {
-              console.log('[DASHBOARD] No client-side session found, but server auth is valid');
-              // We could try to set up a client-side session here if needed for client-side operations
-            }
-          } catch (sessionError) {
-            console.warn('[DASHBOARD] Error checking client session:', sessionError);
-            // This is non-fatal since server auth is working
-          }
-          return; // Continue with dashboard load
-        }
-        
-        // If we get here, server-side auth failed, so check client-side as fallback
-        console.log('[DASHBOARD] Server auth failed, checking client-side session...');
-        const { data: { session }, error } = await window.supabase.auth.getSession();
-        
-        if (session) {
-          console.log('[DASHBOARD] Client-side session found, proceeding with dashboard');
-          return; // Continue with dashboard load
-        }
-        
-        // Neither server-side nor client-side auth is working, redirect to login
-        console.warn('[DASHBOARD] No authentication found, redirecting to login');
-        window.location.href = '/login.html';
-      } catch (e) {
-        console.error('[DASHBOARD] Error checking authentication:', e);
-        // On error, we'll stay on the dashboard and let the server handle any redirects
-      }
-    });
-  </script>
-  
-  <!-- Dashboard Routing -->
-  <script src="js/dashboard.js"></script>
+  <!-- Bundled JavaScript with Supabase + SSR integration -->
+  <script src="/js/bundled/dashboard.bundle.js"></script>
+  <!-- Note: dashboard.js is now bundled in the dashboard.bundle.js -->
 </head>
     <style>
         /* Dashboard styles */

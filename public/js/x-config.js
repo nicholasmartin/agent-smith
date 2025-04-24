@@ -20,8 +20,20 @@ window.AGENT_SMITH_CONFIG = window.AGENT_SMITH_CONFIG || {};
   window.AGENT_SMITH_CONFIG.websiteFormSecret = websiteFormSecret;
   window.AGENT_SMITH_CONFIG.csrfToken = csrfToken;
   
-  // Add a helper method to get the Supabase client
+  // Add a helper method to get the Supabase client with cookie-based auth
   window.AGENT_SMITH_CONFIG.getSupabaseClient = function() {
+    // First check if we have the SSR package for cookie-based auth
+    if (typeof supabaseSSR !== 'undefined' && typeof supabaseSSR.createBrowserClient === 'function') {
+      if (!this.supabaseUrl || !this.supabaseAnonKey) {
+        console.error('Supabase configuration not found');
+        return null;
+      }
+      
+      console.log('Creating cookie-based Supabase client with @supabase/ssr');
+      return supabaseSSR.createBrowserClient(this.supabaseUrl, this.supabaseAnonKey);
+    }
+    
+    // Fallback to regular client if SSR package not available
     if (typeof supabase === 'undefined') {
       console.error('Supabase library not loaded');
       return null;
@@ -32,7 +44,7 @@ window.AGENT_SMITH_CONFIG = window.AGENT_SMITH_CONFIG || {};
       return null;
     }
     
-    console.log('Creating Supabase client with URL:', this.supabaseUrl);
+    console.log('Creating standard Supabase client (fallback):', this.supabaseUrl);
     return supabase.createClient(this.supabaseUrl, this.supabaseAnonKey);
   };
   

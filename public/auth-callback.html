@@ -6,7 +6,8 @@
     <title>Verifying Your Account | Agent Smith</title>
     <meta name="supabase-url" content="https://jnpdszffuosiirapfvwp.supabase.co">
     <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucGRzemZmdW9zaWlyYXBmdndwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTk0NjA4NjAsImV4cCI6MjAxNTAzNjg2MH0.Ry_pZwLhfOVsrLX0h1k4-FEHiBzxQFvJe6ykiIXQeOw">
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Bundled JavaScript -->
+    <script src="/js/bundled/auth-callback.bundle.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -98,177 +99,67 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const statusElement = document.getElementById('status');
             
-            // Initialize Supabase client
-            const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
-            const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
-            const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
-            
             try {
-                console.log('Auth callback page loaded');
-                console.log('URL search:', window.location.search);
-                console.log('URL hash:', window.location.hash);
+                // Initialize Supabase client with cookie-based auth
+                const supabaseUrl = document.querySelector('meta[name="supabase-url"]').content;
+                const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]').content;
+                const supabase = supabaseSSR.createBrowserClient(supabaseUrl, supabaseAnonKey);
                 
-                // Check both query parameters and hash fragment
+                // Parse URL parameters
                 const queryParams = new URLSearchParams(window.location.search);
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
                 
-                // First check if we have tokens in the hash (Supabase redirects this way after verification)
+                // Case 1: Access via hash parameters (OAuth or magic link)
                 const accessToken = hashParams.get('access_token');
                 const refreshToken = hashParams.get('refresh_token');
-                const expiresIn = hashParams.get('expires_in');
-                const expiresAt = hashParams.get('expires_at');
-                const hashType = hashParams.get('type');
                 
-                // Alternatively, check for token in query parameters
-                const token = queryParams.get('token');
-                const type = queryParams.get('type') || hashType;
-                
-                if (accessToken) {
-                    console.log('Found access token in URL hash');
+                if (accessToken && refreshToken) {
+                    statusElement.innerHTML = '<p>Processing authentication...</p>';
                     
-                    // We already have a complete session in the hash
-                    // Store session in localStorage for extra reliability
-                    localStorage.setItem('sb-access-token', accessToken);
-                    localStorage.setItem('sb-refresh-token', refreshToken);
+                    // Set the session with cookie handling
+                    await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
                     
-                    // Also store in the Supabase-specific format
-                    const sessionData = {
-                        access_token: accessToken,
-                        refresh_token: refreshToken,
-                        expires_at: expiresAt,
-                        expires_in: expiresIn
-                    };
-                    localStorage.setItem('sb-jnpdszffuosiirapfvwp-auth-token', JSON.stringify(sessionData));
+                    // Clean up URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
                     
-                    // Set the session in Supabase
-                    await supabase.auth.setSession({
-                        access_token: accessToken,
-                        refresh_token: refreshToken
-                    });
-                    
-                    // Set cookies for server-side authentication
-                    // We need to make a request to our server to set the cookies
-                    try {
-                        statusElement.innerHTML = '<p>Setting authentication cookies...</p>';
-                        
-                        // Make a request to a special endpoint that will set the cookies
-                        const response = await fetch('/api/set-auth-cookie', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                access_token: accessToken,
-                                refresh_token: refreshToken
-                            }),
-                            credentials: 'include' // Important for cookies
-                        });
-                        
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            console.error('Failed to set auth cookies:', errorText);
-                            statusElement.innerHTML += `<p class="error">Error setting cookies: ${errorText}</p>`;
-                        } else {
-                            console.log('Auth cookies set successfully');
-                            statusElement.innerHTML += '<p>Authentication cookies set successfully!</p>';
-                            
-                            // Debug: Check environment variables
-                            try {
-                                const envResponse = await fetch('/api/debug-env', {
-                                    method: 'GET',
-                                    credentials: 'include'
-                                });
-                                
-                                if (envResponse.ok) {
-                                    const envData = await envResponse.json();
-                                    console.log('Environment variables check:', envData);
-                                    
-                                    if (envData.missingVars && envData.missingVars.length > 0) {
-                                        statusElement.innerHTML += `<p class="error">Missing environment variables: ${envData.missingVars.join(', ')}</p>`;
-                                    }
-                                }
-                            } catch (envError) {
-                                console.error('Error checking environment variables:', envError);
-                            }
-                        }
-                    } catch (cookieError) {
-                        console.error('Error setting auth cookies:', cookieError);
-                        statusElement.innerHTML += `<p class="error">Error: ${cookieError.message}</p>`;
-                    }
-                    
-                    // Show success message
+                    // Success message and redirect
                     statusElement.innerHTML = `
-                        <p>Your email has been verified successfully!</p>
+                        <p>Authentication successful!</p>
                         <a href="/dashboard" class="button">Continue to Dashboard</a>
                     `;
                     
-                    // Redirect after a short delay to allow cookies to be set
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 3000);
-                    
+                    setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
                     return;
                 }
                 
-                if (!token) {
-                    throw new Error('No verification token found in URL');
-                }
+                // Case 2: Email verification token
+                const token = queryParams.get('token');
+                const type = queryParams.get('type') || hashParams.get('type');
                 
-                if (type !== 'signup' && type !== 'recovery' && type !== 'invite') {
-                    throw new Error('Invalid verification type');
-                }
-                
-                // According to Supabase docs, we need to call verifyOtp with the token
-                statusElement.innerHTML = '<p>Processing verification...</p>';
-                
-                // Use the official Supabase method to verify the token
-                const { data, error } = await supabase.auth.verifyOtp({
-                    token_hash: token,
-                    type: type
-                });
-                
-                if (error) {
-                    throw error;
-                }
-                
-                // Check if we have a session
-                if (data && data.session) {
-                    console.log('Email verified successfully');
-                    console.log('Session established:', !!data.session);
+                if (token && type) {
+                    statusElement.innerHTML = '<p>Verifying your account...</p>';
                     
-                    // Store session in localStorage for extra reliability
-                    if (data.session.access_token) {
-                        localStorage.setItem('sb-access-token', data.session.access_token);
-                        localStorage.setItem('sb-refresh-token', data.session.refresh_token);
+                    // Verify the token
+                    const { data } = await supabase.auth.verifyOtp({ token_hash: token, type });
+                    
+                    if (data?.session) {
+                        // Success message and redirect
+                        statusElement.innerHTML = `
+                            <p>Your email has been verified successfully!</p>
+                            <a href="/dashboard" class="button">Continue to Dashboard</a>
+                        `;
                         
-                        // Also store in the Supabase-specific format
-                        const sessionData = {
-                            access_token: data.session.access_token,
-                            refresh_token: data.session.refresh_token,
-                            expires_at: data.session.expires_at,
-                            user: data.user
-                        };
-                        localStorage.setItem('sb-jnpdszffuosiirapfvwp-auth-token', JSON.stringify(sessionData));
+                        setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+                    } else {
+                        throw new Error('Verification successful but no session was created');
                     }
-                    
-                    // Show success message
-                    statusElement.innerHTML = `
-                        <p>Your email has been verified successfully!</p>
-                        <a href="/dashboard" class="button">Continue to Dashboard</a>
-                    `;
-                    
-                    // Redirect after a short delay
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 2000);
                 } else {
-                    // This should not happen if verifyOtp succeeded
-                    throw new Error('Verification successful but no session was created');
+                    throw new Error('No verification parameters found');
                 }
             } catch (error) {
                 console.error('Authentication error:', error);
                 statusElement.innerHTML = `
-                    <p class="error">Error: ${error.message || 'Failed to verify your account'}</p>
+                    <p class="error">Error: ${error.message || 'Authentication failed'}</p>
                     <p>Please try logging in with your email and password.</p>
                     <a href="/login.html" class="button">Go to Login</a>
                 `;

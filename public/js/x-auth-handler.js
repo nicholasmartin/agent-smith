@@ -1,7 +1,7 @@
 /**
- * Magic Link Authentication Handler for Agent Smith
+ * Authentication Handler for Agent Smith
  * 
- * This script handles the authentication process when a user arrives via a magic link.
+ * This script handles the authentication process using cookie-based authentication with @supabase/ssr.
  * It extracts tokens from the URL hash, establishes a session, and ensures proper redirection.
  */
 
@@ -41,8 +41,35 @@ async function handleAuthHash() {
         console.log('[AUTH-HANDLER] Cleaning URL hash');
         window.history.replaceState({}, document.title, cleanUrl);
         
-        // Set session with tokens
-        const { error } = await window.supabase.auth.setSession({
+        // Initialize Supabase client with cookie support using @supabase/ssr
+        let client;
+        if (window.supabase) {
+          // Use the existing global client if available
+          client = window.supabase;
+          console.log('[AUTH-HANDLER] Using existing global Supabase client');
+        } else {
+          // Create a new client if needed
+          console.log('[AUTH-HANDLER] Creating new Supabase client');
+          const supabaseUrl = document.querySelector('meta[name="supabase-url"]')?.content;
+          const supabaseAnonKey = document.querySelector('meta[name="supabase-anon-key"]')?.content;
+          
+          if (!supabaseUrl || !supabaseAnonKey) {
+            console.error('[AUTH-HANDLER] Missing Supabase configuration');
+            window.location.href = '/login?error=missing_config';
+            return;
+          }
+          
+          // Create browser client using @supabase/ssr for cookie-based auth
+          if (typeof supabaseSSR !== 'undefined' && typeof supabaseSSR.createBrowserClient === 'function') {
+            client = supabaseSSR.createBrowserClient(supabaseUrl, supabaseAnonKey);
+          } else {
+            // Fallback to standard client
+            client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+          }
+        }
+        
+        // Set session with tokens - uses cookies automatically with @supabase/ssr
+        const { error } = await client.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken
         });
@@ -53,13 +80,13 @@ async function handleAuthHash() {
           return;
         }
         
-        console.log('[AUTH-HANDLER] Session established successfully');
+        console.log('[AUTH-HANDLER] Session established successfully with cookies');
         
         // Give Supabase time to establish the session
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Verify the session was established
-        const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await client.auth.getSession();
         
         if (sessionError || !session) {
           console.error('[AUTH-HANDLER] Session verification failed:', sessionError?.message || 'No session established');

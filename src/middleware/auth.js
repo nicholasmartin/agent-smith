@@ -1,84 +1,55 @@
 /**
  * Authentication Middleware for Agent Smith
  * 
- * This middleware provides server-side authentication handling for the Agent Smith application.
- * It creates a Supabase client with the request context and attaches it to the request object.
- * The protected route middleware checks if the user is authenticated and redirects to login if not.
+ * This middleware provides server-side authentication handling for the Agent Smith application
+ * using the @supabase/ssr package for cookie-based authentication. It creates two Supabase clients:
+ * 1. A regular client with user's auth context from cookies
+ * 2. An admin client with service role for elevated operations
  */
 
 const { createClient } = require('@supabase/supabase-js');
-
-/**
- * Initialize Supabase client for server-side use
- * @returns {Object} Supabase client instance
- */
-function initSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
-}
+const { createServerClient } = require('@supabase/ssr');
 
 /**
  * Main authentication middleware that initializes the Supabase client
  * and attaches it to the request object for use in route handlers
  */
-async function authMiddleware(req, res, next) {
+function authMiddleware(req, res, next) {
   try {
-    // Get JWT from Authorization header or cookies
-    const jwt = await extractJWT(req);
-    
-    // Get the anon key from either SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // Get the anon key from environment variables
     const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
-    // Make sure we have the required environment variables
+    // Validate environment variables
     if (!process.env.SUPABASE_URL || !anonKey || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.error('[AUTH] Missing required Supabase environment variables');
-      console.error('[AUTH] SUPABASE_URL:', !!process.env.SUPABASE_URL);
-      console.error('[AUTH] SUPABASE_ANON_KEY:', !!process.env.SUPABASE_ANON_KEY);
-      console.error('[AUTH] NEXT_PUBLIC_SUPABASE_ANON_KEY:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-      console.error('[AUTH] SUPABASE_SERVICE_ROLE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
       throw new Error('Missing required Supabase environment variables');
     }
     
-    if (jwt) {
-      console.log('[AUTH] Creating Supabase client with JWT');
-      // Create a client with the JWT
-      // Use either SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY
-      const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      
-      req.supabase = createClient(
-        process.env.SUPABASE_URL,
-        anonKey, // Use the anon key for authenticated requests
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-            detectSessionInUrl: false // Don't look for the session in the URL
+    // Create a server-side Supabase client with cookie support using @supabase/ssr
+    req.supabase = createServerClient(
+      process.env.SUPABASE_URL,
+      anonKey,
+      {
+        cookies: {
+          get: (name) => req.cookies?.[name],
+          set: (name, value, options) => {
+            res.cookie(name, value, {
+              ...options,
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production'
+            });
           },
-          global: {
-            headers: {
-              Authorization: `Bearer ${jwt}`
-            }
-          }
+          remove: (name, options) => res.clearCookie(name, options)
         }
-      );
-    } else {
-      console.log('[AUTH] Creating Supabase client with service role');
-      // No JWT, use the service role client
-      req.supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
-    }
+      }
+    );
     
-    // Process continues - auth check happens in protected route middleware
+    // Create an admin client for operations that need service role
+    req.adminSupabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    
     next();
   } catch (error) {
     console.error('[AUTH] Auth middleware error:', error);
@@ -86,138 +57,32 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-/**
- * Extract JWT from request
- * @param {Object} req - Express request object
- * @returns {string|null} JWT token or null if not found
- */
-async function extractJWT(req) {
-  // Debug: Log all cookies
-  console.log('[AUTH] Available cookies:', Object.keys(req.cookies || {}));
-  
-  // Check Authorization header first
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    console.log('[AUTH] Found JWT in Authorization header');
-    return authHeader.substring(7);
-  }
-  
-  // Check for Supabase cookies - multiple formats are possible
-  if (req.cookies) {
-    // Direct access token cookie
-    if (req.cookies['sb-access-token']) {
-      console.log('[AUTH] Found JWT in sb-access-token cookie');
-      return req.cookies['sb-access-token'];
-    }
-    
-    // Check for project-specific cookie format
-    const projectRef = 'jnpdszffuosiirapfvwp'; // Your Supabase project reference
-    const cookieName = `sb-${projectRef}-auth-token`;
-    console.log('[AUTH] Checking for cookie:', cookieName);
-    
-    if (req.cookies[cookieName]) {
-      console.log('[AUTH] Found project-specific cookie');
-      try {
-        // This cookie contains a JSON with session data
-        const sessionData = JSON.parse(req.cookies[cookieName]);
-        console.log('[AUTH] Cookie data keys:', Object.keys(sessionData || {}));
-        if (sessionData && sessionData.access_token) {
-          console.log('[AUTH] Successfully extracted access_token from cookie');
-          return sessionData.access_token;
-        }
-      } catch (e) {
-        console.error('[AUTH] Error parsing Supabase cookie:', e);
-      }
-    }
-    
-    // Check for refresh token - we can use this to get an access token
-    if (req.cookies['sb-refresh-token']) {
-      console.log('[AUTH] Found refresh token, attempting to exchange for access token');
-      try {
-        // Create a temporary Supabase client to exchange the refresh token
-        const tempClient = createClient(
-          process.env.SUPABASE_URL,
-          process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        );
-        
-        // Set the refresh token in the client
-        const { data, error } = await tempClient.auth.refreshSession({
-          refresh_token: req.cookies['sb-refresh-token']
-        });
-        
-        if (error) {
-          console.error('[AUTH] Error refreshing session:', error.message);
-          return null;
-        }
-        
-        if (data && data.session && data.session.access_token) {
-          console.log('[AUTH] Successfully refreshed access token');
-          return data.session.access_token;
-        }
-      } catch (e) {
-        console.error('[AUTH] Error exchanging refresh token:', e);
-      }
-    }
-    
-    // Last resort: check for any cookie that might contain auth data
-    for (const key in req.cookies) {
-      if (key.startsWith('sb-') && key.includes('auth')) {
-        console.log('[AUTH] Found potential Supabase auth cookie:', key);
-        try {
-          const data = JSON.parse(req.cookies[key]);
-          if (data && data.access_token) {
-            console.log('[AUTH] Extracted access_token from alternative cookie');
-            return data.access_token;
-          }
-        } catch (e) {}
-      }
-    }
-  }
-  
-  console.log('[AUTH] No JWT found in request');
-  return null;
-}
+// Legacy token extraction function has been removed as it's no longer needed with @supabase/ssr
 
 /**
  * Protected route middleware that checks if the user is authenticated
  * and redirects to login if not
  */
 async function protectedRouteMiddleware(req, res, next) {
-  console.log('[AUTH] Checking authentication for protected route');
-  
   try {
-    // Get JWT from request
-    const jwt = await extractJWT(req);
-    console.log('[AUTH] JWT found:', !!jwt);
+    // Get session from cookies (handled by @supabase/ssr)
+    const { data: { session } } = await req.supabase.auth.getSession();
     
-    if (!jwt) {
-      console.log('[AUTH] No JWT found, redirecting to login');
+    if (!session) {
+      console.log('[AUTH] No valid session found, redirecting to login');
       return res.redirect('/login.html');
     }
     
-    // Get user from Supabase
-    const { data, error } = await req.supabase.auth.getUser();
+    // Get user from session
+    const { data: { user }, error } = await req.supabase.auth.getUser();
     
-    // Debug the response
-    console.log('[AUTH] Supabase auth.getUser response:', { 
-      hasData: !!data, 
-      hasUser: !!(data && data.user),
-      error: error ? error.message : null 
-    });
-    
-    if (error) {
-      console.log('[AUTH] Authentication error:', error.message);
-      return res.redirect('/login.html');
-    }
-    
-    if (!data || !data.user) {
-      console.log('[AUTH] No user data returned');
+    if (error || !user) {
+      console.log('[AUTH] User not found in session');
       return res.redirect('/login.html');
     }
     
     // User is authenticated, attach to request and continue
-    console.log('[AUTH] User authenticated successfully:', data.user.email);
-    req.user = data.user;
+    req.user = user;
     next();
   } catch (error) {
     console.error('[AUTH] Protected route middleware error:', error);
@@ -231,11 +96,17 @@ async function protectedRouteMiddleware(req, res, next) {
  */
 async function apiAuthMiddleware(req, res, next) {
   try {
-    // Get user from Supabase
+    // Get session from cookies (handled by @supabase/ssr)
+    const { data: { session } } = await req.supabase.auth.getSession();
+    
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // Get user from session
     const { data: { user }, error } = await req.supabase.auth.getUser();
     
     if (error || !user) {
-      console.log('[AUTH] API auth failed:', error?.message || 'No user found');
       return res.status(401).json({ error: 'Unauthorized' });
     }
     

@@ -10,9 +10,8 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/layout.css">
     
-    <!-- Supabase -->  
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
-    <script src="/js/config.js"></script>
+    <!-- Bundled JavaScript -->
+    <script src="/js/bundled/signup.bundle.js"></script>
     <style>
         :root {
             --brand-color: #4CAF50;
@@ -307,20 +306,16 @@
                 try {
                     console.log('Attempting signup with email:', email);
                     
-                    // Test the Supabase connection first
-                    try {
-                        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-                        console.log('Session check result:', sessionError ? 'Error' : 'Success', session ? 'Has session' : 'No session');
-                        if (sessionError) {
-                            console.warn('Session check error:', sessionError);
-                        }
-                    } catch (sessionCheckError) {
-                        console.error('Error checking session:', sessionCheckError);
+                    // Check if user already has a session
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (session) {
+                        // User is already signed in, redirect to dashboard
+                        window.location.href = '/dashboard';
+                        return;
                     }
                     
-                    // Sign up with Supabase - with detailed error logging
-                    console.log('Calling auth.signUp...');
-                    const signUpResult = await supabaseClient.auth.signUp({
+                    // Sign up with Supabase using cookie-based auth
+                    const { error } = await supabaseClient.auth.signUp({
                         email,
                         password,
                         options: {
@@ -333,36 +328,21 @@
                         }
                     });
                     
-                    console.log('Sign up API call completed');
-                    console.log('Sign up result:', signUpResult.error ? 'Error' : 'Success');
-                    
-                    if (signUpResult.error) {
-                        console.error('Detailed signup error:', signUpResult.error);
-                        throw signUpResult.error;
+                    if (error) {
+                        throw error;
                     }
                     
                     // Show success message
                     showStatus('Account created! Please check your email for verification instructions.', 'success');
                     
-                    // Store session data in localStorage for persistence
-                    if (signUpResult.data && signUpResult.data.session) {
-                        console.log('Storing session data for persistence');
-                        localStorage.setItem('supabase.auth.token', JSON.stringify({
-                            access_token: signUpResult.data.session.access_token,
-                            refresh_token: signUpResult.data.session.refresh_token,
-                            expires_at: Math.floor(Date.now() / 1000) + signUpResult.data.session.expires_in
-                        }));
-                    }
+                    // Session is automatically stored in cookies by @supabase/ssr
                     
                     // Clear form
                     if (!urlParams.has('email')) {
                         signupForm.reset();
                     }
                 } catch (error) {
-                    console.error('Error signing up:', error);
-                    // More detailed error message
-                    const errorDetails = error.message || 'Error creating account';
-                    showStatus(`Error: ${errorDetails}. Please try again or contact support.`, 'error');
+                    showStatus(`Error: ${error.message || 'Error creating account'}. Please try again or contact support.`, 'error');
                 } finally {
                     signupBtn.disabled = false;
                 }

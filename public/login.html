@@ -10,9 +10,8 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/layout.css">
     
-    <!-- Supabase -->  
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
-    <script src="/js/config.js"></script>
+    <!-- Bundled JavaScript -->
+    <script src="/js/bundled/login.bundle.js"></script>
     <style>
         :root {
             --brand-color: #4CAF50;
@@ -240,12 +239,9 @@
                 return;
             }
             
-            // Check if user is already signed in
+            // Check if user is already signed in and redirect if authenticated
             supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                if (session) {
-                    // Redirect to dashboard if already authenticated
-                    window.location.href = '/dashboard';
-                }
+                if (session) window.location.href = '/dashboard';
             });
             
             // Parse URL parameters to pre-fill email field
@@ -271,18 +267,15 @@
                 showStatus('Signing in...', 'info');
                 
                 try {
-                    const { error } = await supabaseClient.auth.signInWithPassword({
-                        email,
-                        password
-                    });
-                    
+                    // Sign in with cookie-based authentication
+                    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (error) throw error;
                     
                     // Redirect to dashboard on successful login
                     window.location.href = '/dashboard';
                 } catch (error) {
-                    console.error('Error signing in:', error);
                     showStatus(error.message || 'Invalid email or password', 'error');
+                } finally {
                     loginBtn.disabled = false;
                 }
             });
@@ -308,15 +301,15 @@
                 try {
                     showStatus('Sending password reset email...', 'info');
                     
+                    // Request password reset with redirect to auth-callback
                     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                        redirectTo: window.location.origin + '/reset-password'
+                        redirectTo: window.location.origin + '/auth-callback.html'
                     });
                     
                     if (error) throw error;
                     
                     showStatus('Password reset email sent. Please check your inbox.', 'success');
                 } catch (error) {
-                    console.error('Error sending reset email:', error);
                     showStatus(error.message || 'Error sending reset email', 'error');
                 }
             });
